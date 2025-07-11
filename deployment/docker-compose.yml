@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  
+  saas-foundry-api:
+    build: .
+    restart: on-failure
+    container_name: saas-foundry-api
+    ports:
+      - "6060:6060"
+      - "6161:6161"
+    networks:
+      - saas-network
+    env_file:
+      - .prod.env
+    environment:
+      - MONGODB_URI=${MONGO_URI}
+      - GENIEACS_URL=${GENIEACS_URL}
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - POSTGRES_DB_URL=${POSTGRES_DB_URL}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./logs:/app/logs
+
+networks:
+  saas-network:
+    driver: bridge

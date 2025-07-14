@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vonage.saas_foundry_api.database.entity.ClientEntity;
 import com.vonage.saas_foundry_api.database.entity.UserEntity;
-import com.vonage.saas_foundry_api.dto.request.ClientDto;
 import com.vonage.saas_foundry_api.dto.request.UserDto;
 import com.vonage.saas_foundry_api.service.queue.UserProvisioningEvent;
 

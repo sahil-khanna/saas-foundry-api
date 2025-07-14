@@ -2,7 +2,6 @@ package com.vonage.saas_foundry_api.service.queue;
 
 import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vonage.saas_foundry_api.dto.request.UserDto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

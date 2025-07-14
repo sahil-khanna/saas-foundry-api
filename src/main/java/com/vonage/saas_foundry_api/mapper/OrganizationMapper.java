@@ -15,4 +15,12 @@ public class OrganizationMapper {
     organizationEntity.setAdminEmail(organizationDto.getAdminEmail());
     return organizationEntity;
   }
+
+  public static OrganizationDto toDto(OrganizationEntity organizationEntity) {
+    OrganizationDto organizationDto = new OrganizationDto();
+    organizationDto.setAdminEmail(organizationEntity.getAdminEmail());
+    organizationDto.setName(organizationEntity.getName());
+    organizationDto.setUid(organizationEntity.getUid());
+    return organizationDto;
+  }
 }

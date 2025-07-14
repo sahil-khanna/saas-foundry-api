@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
@@ -21,7 +22,7 @@ import com.vonage.saas_foundry_api.mapper.TenantMapper;
 import com.vonage.saas_foundry_api.service.other.EmailService;
 import com.vonage.saas_foundry_api.service.other.KeycloakService;
 import com.vonage.saas_foundry_api.service.queue.TenantProvisioningEvent;
-import jakarta.ws.rs.NotFoundException;
+import com.vonage.saas_foundry_api.utils.ClientUtils;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -32,20 +33,14 @@ public class ClientProvisioningWorker {
   private final KeycloakService keycloakService;
   private final EmailService emailService;
   private final JdbcTemplate jdbcTemplate;
+  private final ClientUtils clientUtils;
   private static final Logger logger = LoggerFactory.getLogger(ClientProvisioningWorker.class);
 
   @RabbitListener(queues = QueueNames.CLIENT_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionClient(String json) throws JsonProcessingException {
     TenantProvisioningEvent event = TenantMapper.toTenantProvisioningEvent(json);
-    String uid = event.getUid();
-
-    Optional<ClientEntity> optionalClientEntity = clientRepository.findById(uid);
-    if (optionalClientEntity.isEmpty()) {
-      throw new NotFoundException();
-    }
-
-    ClientEntity clientEntity = optionalClientEntity.get();
+    ClientEntity clientEntity = clientUtils.findClientByUid(event.getUid());
 
     if (!clientEntity.isKeycloakRealmProvisioned()) {
       createKeycloakRealm(clientEntity);
@@ -124,5 +119,10 @@ public class ClientProvisioningWorker {
     clientEntity.setDbProvisionAttemptedOn(Instant.now());
     clientEntity.setDbProvisioned(true);
     clientRepository.save(clientEntity);
+  }
+
+  @Recover
+  public void recover(Exception ex, String json) {
+    logger.error("Final failure after retries for event: {}", json, ex);
   }
 }

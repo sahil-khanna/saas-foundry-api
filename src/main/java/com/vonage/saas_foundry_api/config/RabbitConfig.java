@@ -17,4 +17,9 @@ public class RabbitConfig {
   public Queue clientProvisioningQueue() {
     return new Queue(QueueNames.CLIENT_PROVISIONING_QUEUE, true);
   }
+
+  @Bean
+  public Queue userProvisioningQueue() {
+    return new Queue(QueueNames.USER_PROVISIONING_QUEUE, true);
+  }
 }

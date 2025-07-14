@@ -15,7 +15,15 @@ public class ClientMapper {
     clientEntity.setName(clientDto.getName());
     clientEntity.setAdminEmail(clientDto.getAdminEmail());
     clientEntity.setOrganization(organizationEntity);
-    
+
     return clientEntity;
+  }
+  
+  public static ClientDto toDto(ClientEntity clientEntity) {
+    ClientDto clientDto = new ClientDto();
+    clientDto.setAdminEmail(clientEntity.getAdminEmail());
+    clientDto.setName(clientEntity.getName());
+    clientDto.setUid(clientEntity.getUid());
+    return clientDto;
   }
 }

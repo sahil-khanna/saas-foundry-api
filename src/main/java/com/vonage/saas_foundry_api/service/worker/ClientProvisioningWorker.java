@@ -4,6 +4,7 @@ import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vonage.saas_foundry_api.common.QueueNames;
+import com.vonage.saas_foundry_api.config.database.DatabaseContextHolder;
 import com.vonage.saas_foundry_api.database.entity.ClientEntity;
 import com.vonage.saas_foundry_api.database.repository.ClientRepository;
 import com.vonage.saas_foundry_api.dto.request.KeycloakRealmDto;
@@ -19,25 +21,34 @@ import com.vonage.saas_foundry_api.dto.request.KeycloakUserDto;
 import com.vonage.saas_foundry_api.dto.request.SendEmailDto;
 import com.vonage.saas_foundry_api.mapper.TenantMapper;
 import com.vonage.saas_foundry_api.service.other.EmailService;
+import com.vonage.saas_foundry_api.service.other.TenantDbMigrationService;
 import com.vonage.saas_foundry_api.service.other.KeycloakService;
 import com.vonage.saas_foundry_api.service.queue.TenantProvisioningEvent;
 import com.vonage.saas_foundry_api.utils.ClientUtils;
-import lombok.AllArgsConstructor;
+import com.vonage.saas_foundry_api.utils.ThreadUtils;
 
-@AllArgsConstructor
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
 @Service
 public class ClientProvisioningWorker {
+
+  @Value("${postgres.default-db}")
+  private String defaultDb;
 
   private final ClientRepository clientRepository;
   private final KeycloakService keycloakService;
   private final EmailService emailService;
   private final JdbcTemplate jdbcTemplate;
   private final ClientUtils clientUtils;
+  private final TenantDbMigrationService tenantDbMigrationService;
   private static final Logger logger = LoggerFactory.getLogger(ClientProvisioningWorker.class);
 
   @RabbitListener(queues = QueueNames.CLIENT_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionClient(String json) throws JsonProcessingException {
+    DatabaseContextHolder.setCurrentDb(defaultDb);
+
     TenantProvisioningEvent event = TenantMapper.toTenantProvisioningEvent(json);
     ClientEntity clientEntity = clientUtils.findClientByUid(event.getUid());
 
@@ -49,15 +60,9 @@ public class ClientProvisioningWorker {
       createDatabase(clientEntity);
     }
 
-    try {
-      logger.info("Sleeping for 10 sec before creating user {} for realm {}", clientEntity.getAdminEmail(), clientEntity.getUid());
-      Thread.sleep(10000);
-    } catch (InterruptedException e) {
-      logger.error("Thread was interrupted: {}", e.getLocalizedMessage());
-      Thread.currentThread().interrupt();
-    }
-
     if (!clientEntity.isKeycloakUserProvisioned()) {
+      ThreadUtils.sleep(10000, "Sleeping for 10 sec before creating user " + clientEntity.getAdminEmail()
+          + " for realm " + clientEntity.getUid());
       createKeycloakUser(clientEntity);
     }
 
@@ -129,6 +134,8 @@ public class ClientProvisioningWorker {
     } else {
       logger.error("Database {} already exists.", dbName);
     }
+
+    tenantDbMigrationService.migrate(clientEntity.getUid());
 
     clientEntity.setDbProvisionAttemptedOn(Instant.now());
     clientEntity.setDbProvisioned(true);

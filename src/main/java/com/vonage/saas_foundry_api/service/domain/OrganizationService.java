@@ -1,12 +1,15 @@
 package com.vonage.saas_foundry_api.service.domain;
 
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import com.vonage.saas_foundry_api.common.QueueNames;
+import com.vonage.saas_foundry_api.config.database.DatabaseContextHolder;
 import com.vonage.saas_foundry_api.database.entity.OrganizationEntity;
 import com.vonage.saas_foundry_api.database.repository.OrganizationRepository;
 import com.vonage.saas_foundry_api.dto.request.OrganizationDto;
@@ -15,16 +18,21 @@ import com.vonage.saas_foundry_api.exception.DuplicateResourceException;
 import com.vonage.saas_foundry_api.mapper.OrganizationMapper;
 import com.vonage.saas_foundry_api.service.queue.MessageQueue;
 import com.vonage.saas_foundry_api.service.queue.TenantProvisioningEvent;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class OrganizationService {
+
+  @Value("${postgres.default-db}")
+  private String defaultDb;
 
   private final OrganizationRepository organizationRepository;
   private final MessageQueue messageQueue;
 
   public void create(OrganizationDto organizationDto) {
+    DatabaseContextHolder.setCurrentDb(defaultDb);
+
     if (organizationRepository.existsByName(organizationDto.getName())) {
       throw new DuplicateResourceException("Organization with the same name already exists");
     }
@@ -37,6 +45,8 @@ public class OrganizationService {
   }
 
   public OrganizationsDto list(int page, int size) {
+    DatabaseContextHolder.setCurrentDb(defaultDb);
+
     Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
     Pageable pageable = PageRequest.of(page, size, sort);
     Page<OrganizationEntity> organizationsPage = organizationRepository.findAll(pageable);

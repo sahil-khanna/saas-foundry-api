@@ -12,6 +12,7 @@ import lombok.Setter;
 public class UserProvisioningEvent implements QueueEvent {
 
   private long id;
+  private String clientUid;
 
   UserProvisioningEvent() {
     super();
@@ -21,7 +22,7 @@ public class UserProvisioningEvent implements QueueEvent {
   public String toString() {
     ObjectMapper objectMapper = new ObjectMapper();
     try {
-      return objectMapper.writeValueAsString(Map.of("id", id));
+      return objectMapper.writeValueAsString(Map.of("id", id, "clientUid", clientUid));
     } catch (Exception e) {
       return "{}";
     }

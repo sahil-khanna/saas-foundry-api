@@ -45,12 +45,20 @@ public class ClientProvisioningWorker {
       createKeycloakRealm(clientEntity);
     }
 
-    if (!clientEntity.isKeycloakUserProvisioned()) {
-      createKeycloakUser(clientEntity);
-    }
-
     if (!clientEntity.isDbProvisioned()) {
       createDatabase(clientEntity);
+    }
+
+    try {
+      logger.info("Sleeping for 10 sec before creating user {} for realm {}", clientEntity.getAdminEmail(), clientEntity.getUid());
+      Thread.sleep(10000);
+    } catch (InterruptedException e) {
+      logger.error("Thread was interrupted: {}", e.getLocalizedMessage());
+      Thread.currentThread().interrupt();
+    }
+
+    if (!clientEntity.isKeycloakUserProvisioned()) {
+      createKeycloakUser(clientEntity);
     }
 
     if (!clientEntity.isWelcomeEmailSent()) {
@@ -61,7 +69,8 @@ public class ClientProvisioningWorker {
   private void createKeycloakRealm(ClientEntity clientEntity) {
     clientEntity.setKeycloakRealmProvisionAttemptedOn(Instant.now());
 
-    boolean isCreated = keycloakService.createRealm(new KeycloakRealmDto(clientEntity.getUid(), clientEntity.getName()));
+    boolean isCreated = keycloakService
+        .createRealm(new KeycloakRealmDto(clientEntity.getUid(), clientEntity.getName()));
 
     if (!isCreated) {
       clientRepository.save(clientEntity);
@@ -75,12 +84,18 @@ public class ClientProvisioningWorker {
   private void createKeycloakUser(ClientEntity clientEntity) {
     clientEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
 
-    String adminEmail = clientEntity.getAdminEmail();
-    boolean isCreated = keycloakService.createUser(new KeycloakUserDto(adminEmail, adminEmail, clientEntity.getUid()));
+    KeycloakUserDto keycloakUserDto = KeycloakUserDto.builder()
+        .username(clientEntity.getAdminEmail())
+        .email(clientEntity.getAdminEmail())
+        .firstName("Admin")
+        .lastName("Admin")
+        .realm(clientEntity.getUid())
+        .build();
+    boolean isCreated = keycloakService.createUser(keycloakUserDto);
 
     if (!isCreated) {
       clientRepository.save(clientEntity);
-      throw new CannotCreateTransactionException("Could not create a user in Keycloak");
+      throw new CannotCreateTransactionException("Could not create a client admin user in Keycloak");
     }
 
     clientEntity.setKeycloakUserProvisioned(true);

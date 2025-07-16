@@ -1,7 +1,6 @@
 package com.vonage.saas_foundry_api.service.worker;
 
 import java.time.Instant;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -51,12 +50,18 @@ public class UserProvisioningWorker {
   private void createKeycloakUser(UserEntity userEntity) {
     userEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
 
-    String email = userEntity.getEmail();
-    boolean isCreated = keycloakService.createUser(new KeycloakUserDto(email, email, userEntity.getClient().getUid()));
+    KeycloakUserDto keycloakUserDto = KeycloakUserDto.builder()
+        .username(userEntity.getEmail())
+        .email(userEntity.getEmail())
+        .firstName(userEntity.getFirstName())
+        .lastName(userEntity.getLastName())
+        .realm(userEntity.getClient().getUid())
+        .build();
+    boolean isCreated = keycloakService.createUser(keycloakUserDto);
 
     if (!isCreated) {
       userRepository.save(userEntity);
-      throw new CannotCreateTransactionException("Could not create a user in Keycloak");
+      throw new CannotCreateTransactionException("Could not create a client user in Keycloak");
     }
 
     userEntity.setKeycloakUserProvisioned(true);

@@ -1,9 +1,13 @@
 package com.vonage.saas_foundry_api.service.other;
 
+import java.util.List;
 import org.apache.http.HttpStatus;
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import com.vonage.saas_foundry_api.dto.request.KeycloakRealmDto;
 import com.vonage.saas_foundry_api.dto.request.KeycloakUserDto;
@@ -15,16 +19,32 @@ import lombok.AllArgsConstructor;
 public class KeycloakService {
 
   private final Keycloak keycloak;
-  
+  private static final Logger logger = LoggerFactory.getLogger(KeycloakService.class);
+
   public boolean createUser(KeycloakUserDto keycloakUserDto) {
     UserRepresentation userRepresentation = new UserRepresentation();
     userRepresentation.setUsername(keycloakUserDto.getUsername());
     userRepresentation.setEmail(keycloakUserDto.getEmail());
+    userRepresentation.setFirstName(keycloakUserDto.getFirstName());
+    userRepresentation.setLastName(keycloakUserDto.getLastName());
     userRepresentation.setEnabled(true);
 
-    Response response = keycloak.realm(keycloakUserDto.getRealm()).users().create(userRepresentation);
-    boolean status = response.getStatus() == HttpStatus.SC_CREATED;
-    response.close();
+    boolean status = false;
+
+    logger.info("Creating user {} in realm {}", userRepresentation.getEmail(), keycloakUserDto.getRealm());
+    try (Response response = keycloak.realm(keycloakUserDto.getRealm()).users().create(userRepresentation)) {
+      status = response.getStatus() == HttpStatus.SC_CREATED;
+      if (status) {
+        logger.info("Created user {} in realm {}", userRepresentation.getEmail(), keycloakUserDto.getRealm());
+      } else {
+        logger.info("Failed to create user {} in realm {}. Error: {}", userRepresentation.getEmail(),
+            keycloakUserDto.getRealm(), response.getStatusInfo().getReasonPhrase());
+      }
+
+    } catch (Exception e) {
+      logger.error("Failed to create user {} in realm {}: {}", keycloakUserDto.getEmail(), keycloakUserDto.getRealm(),
+          e.getMessage());
+    }
 
     return status;
   }
@@ -35,7 +55,27 @@ public class KeycloakService {
     realmRepresentation.setRealm(keycloakRealmDto.getUid());
     realmRepresentation.setEnabled(true);
 
-    keycloak.realms().create(realmRepresentation);
-    return true;
+    ClientRepresentation clientRepresentation = new ClientRepresentation();
+    clientRepresentation.setClientId("saas-web-ui");
+    clientRepresentation.setEnabled(true);
+    clientRepresentation.setRedirectUris(List.of("http://localhost:3000/*"));
+    clientRepresentation.setServiceAccountsEnabled(true);
+    clientRepresentation.setPublicClient(true);
+    realmRepresentation.setClients(List.of(clientRepresentation));
+
+    boolean status = false;
+
+    logger.info("Creating realm {} and client {}", realmRepresentation.getRealm(), clientRepresentation.getClientId());
+    try {
+      keycloak.realms().create(realmRepresentation);
+      status = true;
+      logger.info("Created realm {} and client {}", realmRepresentation.getRealm(), clientRepresentation.getClientId());
+    } catch (Exception e) {
+      logger.error("Failed to create realm {} and client {}: {}", realmRepresentation.getRealm(),
+          clientRepresentation.getId(),
+          e.getMessage());
+    }
+
+    return status;
   }
 }

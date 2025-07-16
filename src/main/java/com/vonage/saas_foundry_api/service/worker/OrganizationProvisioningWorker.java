@@ -54,12 +54,18 @@ public class OrganizationProvisioningWorker {
   private void createKeycloakUser(OrganizationEntity organizationEntity) {
     organizationEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
 
-    String adminEmail = organizationEntity.getAdminEmail();
-    boolean isCreated = keycloakService.createUser(new KeycloakUserDto(adminEmail, adminEmail, applicationRealm));
+    KeycloakUserDto keycloakUserDto = KeycloakUserDto.builder()
+        .username(organizationEntity.getAdminEmail())
+        .email(organizationEntity.getAdminEmail())
+        .firstName("Admin")
+        .lastName("Admin")
+        .realm(applicationRealm)
+        .build();
+    boolean isCreated = keycloakService.createUser(keycloakUserDto);
 
     if (!isCreated) {
       organizationRepository.save(organizationEntity);
-      throw new CannotCreateTransactionException("Could not create a user in Keycloak");
+      throw new CannotCreateTransactionException("Could not create a organization admin user in Keycloak");
     }
 
     organizationEntity.setKeycloakUserProvisioned(true);
@@ -78,7 +84,7 @@ public class OrganizationProvisioningWorker {
     organizationEntity.setWelcomeEmailSent(true);
     organizationRepository.save(organizationEntity);
   }
-  
+
   @Recover
   public void recover(Exception ex, String json) {
     logger.error("Final failure after retries for event: {}", json, ex);

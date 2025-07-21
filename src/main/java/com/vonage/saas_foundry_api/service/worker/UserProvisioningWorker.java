@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vonage.saas_foundry_api.common.QueueNames;
-import com.vonage.saas_foundry_api.config.database.DatabaseContextHolder;
+import com.vonage.saas_foundry_api.config.database.TenantContext;
 import com.vonage.saas_foundry_api.database.entity.UserEntity;
 import com.vonage.saas_foundry_api.database.repository.UserRepository;
 import com.vonage.saas_foundry_api.dto.request.KeycloakUserDto;
@@ -38,7 +38,7 @@ public class UserProvisioningWorker {
   public void provisionUser(String json) throws JsonProcessingException {
     UserProvisioningEvent event = UserMapper.toUserProvisioningEvent(json);
 
-    DatabaseContextHolder.setCurrentDb(event.getClientUid());
+    TenantContext.setTenantId(event.getClientUid());
 
     UserEntity userEntity = userUtils.findUserById(event.getId());
 

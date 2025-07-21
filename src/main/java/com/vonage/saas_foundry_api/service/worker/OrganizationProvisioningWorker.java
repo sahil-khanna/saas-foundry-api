@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vonage.saas_foundry_api.common.QueueNames;
-import com.vonage.saas_foundry_api.config.database.DatabaseContextHolder;
+import com.vonage.saas_foundry_api.config.database.TenantContext;
 import com.vonage.saas_foundry_api.database.entity.OrganizationEntity;
 import com.vonage.saas_foundry_api.database.repository.OrganizationRepository;
 import com.vonage.saas_foundry_api.dto.request.KeycloakUserDto;
@@ -31,8 +31,8 @@ public class OrganizationProvisioningWorker {
   @Value("${keycloak.application-realm}")
   private String applicationRealm;
 
-  @Value("${postgres.default-db}")
-  private String defaultDb;
+  @Value("${tenant.root}")
+  private String rootTenant;
 
   private final OrganizationRepository organizationRepository;
   private final KeycloakService keycloakService;
@@ -43,7 +43,7 @@ public class OrganizationProvisioningWorker {
   @RabbitListener(queues = QueueNames.ORGANIZATION_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionOrganization(String json) throws JsonProcessingException {
-    DatabaseContextHolder.setCurrentDb(defaultDb);
+    TenantContext.setTenantId(rootTenant);
     
     TenantProvisioningEvent event = TenantMapper.toTenantProvisioningEvent(json);
     OrganizationEntity organizationEntity = organizationUtils.findOrgByUid(event.getUid());

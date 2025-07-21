@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TenantDbMigrationService {
 
-  @Value("${postgres.url}")
+  @Value("${spring.datasource.url}")
   private String postgresUrl;
 
   @Value("${spring.datasource.username}")

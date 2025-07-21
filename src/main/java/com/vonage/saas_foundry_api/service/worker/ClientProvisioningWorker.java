@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vonage.saas_foundry_api.common.QueueNames;
-import com.vonage.saas_foundry_api.config.database.DatabaseContextHolder;
+import com.vonage.saas_foundry_api.config.database.TenantContext;
 import com.vonage.saas_foundry_api.database.entity.ClientEntity;
 import com.vonage.saas_foundry_api.database.repository.ClientRepository;
 import com.vonage.saas_foundry_api.dto.request.KeycloakRealmDto;
@@ -33,8 +33,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class ClientProvisioningWorker {
 
-  @Value("${postgres.default-db}")
-  private String defaultDb;
+  @Value("${tenant.root}")
+  private String rootTenant;
 
   private final ClientRepository clientRepository;
   private final KeycloakService keycloakService;
@@ -47,7 +47,7 @@ public class ClientProvisioningWorker {
   @RabbitListener(queues = QueueNames.CLIENT_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionClient(String json) throws JsonProcessingException {
-    DatabaseContextHolder.setCurrentDb(defaultDb);
+    TenantContext.setTenantId(rootTenant);
 
     TenantProvisioningEvent event = TenantMapper.toTenantProvisioningEvent(json);
     ClientEntity clientEntity = clientUtils.findClientByUid(event.getUid());

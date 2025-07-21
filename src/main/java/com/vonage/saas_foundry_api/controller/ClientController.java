@@ -59,7 +59,6 @@ public class ClientController {
   public ResponseEntity<UsersDto> listUsers(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
-    clientService.listUsers(orgUid, clientUid, page, size);
     return ResponseEntity.ok().body(clientService.listUsers(orgUid, clientUid, page, size));
   }
 }

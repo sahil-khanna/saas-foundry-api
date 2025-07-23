@@ -3,32 +3,33 @@ package com.vonage.saas_foundry_api.service.other;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.vonage.saas_foundry_api.config.properties.DatabaseProperties;
+import com.vonage.saas_foundry_api.enums.TenantType;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 @Service
 public class TenantDbMigrationService {
 
-  @Value("${spring.datasource.url}")
-  private String postgresUrl;
-
-  @Value("${spring.datasource.username}")
-  private String username;
-
-  @Value("${spring.datasource.password}")
-  private String password;
+  private final DatabaseProperties databaseProperties;
 
   private static final Logger logger = LoggerFactory.getLogger(TenantDbMigrationService.class);
 
-  public void migrate(String dbName) {
+  public void migrate(String dbName, TenantType tenantType) {
     logger.info("Running Flyway migration for DB: {}", dbName);
 
     Flyway flyway = Flyway.configure()
-        .dataSource(postgresUrl + "/" + dbName, username, password)
-        .locations("classpath:db/migration")
+        .dataSource(databaseProperties.getUrl() + "/" + dbName, databaseProperties.getUsername(), databaseProperties.getPassword())
+        .locations("classpath:db/migration/" + tenantType.getValue())
         .baselineOnMigrate(true)
         .load();
 
-    flyway.migrate();
+    try {
+      flyway.migrate();
+    } catch (Exception e) {
+      logger.error("Failed to migrate schema to the database {}: {}", dbName, e.getMessage());
+      throw e;
+    }
   }
 }

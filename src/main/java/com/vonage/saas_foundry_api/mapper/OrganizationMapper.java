@@ -1,7 +1,10 @@
 package com.vonage.saas_foundry_api.mapper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vonage.saas_foundry_api.database.entity.OrganizationEntity;
 import com.vonage.saas_foundry_api.dto.request.OrganizationDto;
+import com.vonage.saas_foundry_api.service.queue.OrganizationProvisioningEvent;
 
 public class OrganizationMapper {
 
@@ -22,5 +25,18 @@ public class OrganizationMapper {
     organizationDto.setName(organizationEntity.getName());
     organizationDto.setUid(organizationEntity.getUid());
     return organizationDto;
+  }
+
+  public static OrganizationProvisioningEvent toProvisioningEvent(String json)
+      throws JsonProcessingException {
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.readValue(json,
+        OrganizationProvisioningEvent.class);
+  }
+
+  public static String toJsonString(OrganizationProvisioningEvent organizationProvisioningEvent)
+      throws JsonProcessingException {
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.writeValueAsString(organizationProvisioningEvent);
   }
 }

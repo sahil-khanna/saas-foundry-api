@@ -47,7 +47,7 @@ public class ClientController {
   @Operation(description = "Create a user")
   public ResponseEntity<String> createUser(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestBody UserDto userDto) {
-    clientService.createUser(orgUid, clientUid, userDto);
+    clientService.createUser(clientUid, userDto);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
 
@@ -59,6 +59,6 @@ public class ClientController {
   public ResponseEntity<UsersDto> listUsers(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
-    return ResponseEntity.ok().body(clientService.listUsers(orgUid, clientUid, page, size));
+    return ResponseEntity.ok().body(clientService.listUsers(clientUid, page, size));
   }
 }

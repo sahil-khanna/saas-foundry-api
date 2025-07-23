@@ -5,8 +5,6 @@ import com.github.ksuid.Ksuid;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,18 +14,13 @@ import jakarta.persistence.Index;
 @Setter
 @Entity
 @Table(name = "clients", indexes = {
-    @Index(name = "idx_client_name", columnList = "name"),
-    @Index(name = "idx_client_org_uid", columnList = "org_uid")
+    @Index(name = "idx_client_name", columnList = "name")
 })
 public class ClientEntity extends EntityBase {
 
   @Id
   @Column(name = "id", length = 27, nullable = false, updatable = false, unique = true)
   private final String uid = Ksuid.newKsuid().toString();
-
-  @ManyToOne
-  @JoinColumn(name = "org_uid", nullable = false)
-  private OrganizationEntity organization;
 
   @Column(length = 250)
   private String name;

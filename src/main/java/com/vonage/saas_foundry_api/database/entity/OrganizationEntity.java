@@ -39,4 +39,10 @@ public class OrganizationEntity extends EntityBase {
 
   @Column(name = "welcome_email_attempted_on")
   private Instant welcomeEmailAttemptedOn;
+
+  @Column(name = "is_db_provisioned")
+  private boolean isDbProvisioned = false;
+
+  @Column(name = "db_provision_attempted_on")
+  private Instant dbProvisionAttemptedOn;
 }

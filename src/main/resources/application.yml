@@ -23,6 +23,11 @@ spring:
         "[format_sql]": true
   flyway:
     enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL}/realms/master
 
 server:
   port: 6060

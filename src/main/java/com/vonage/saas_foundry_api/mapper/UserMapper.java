@@ -2,7 +2,6 @@ package com.vonage.saas_foundry_api.mapper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vonage.saas_foundry_api.database.entity.ClientEntity;
 import com.vonage.saas_foundry_api.database.entity.UserEntity;
 import com.vonage.saas_foundry_api.dto.request.UserDto;
 import com.vonage.saas_foundry_api.service.queue.UserProvisioningEvent;
@@ -13,12 +12,11 @@ public class UserMapper {
     // Do nothing
   }
 
-  public static UserEntity toUserEntity(ClientEntity clientEntity, UserDto userDto) {
+  public static UserEntity toUserEntity(UserDto userDto) {
     UserEntity userEntity = new UserEntity();
     userEntity.setEmail(userDto.getEmail());
     userEntity.setFirstName(userDto.getFirstName());
     userEntity.setLastName(userDto.getLastName());
-    userEntity.setClient(clientEntity);
     
     return userEntity;
   }

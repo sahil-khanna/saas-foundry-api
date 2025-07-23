@@ -10,17 +10,19 @@ spring:
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
   datasource:
-    url: ${POSTGRES_APP_DB_URL}
+    url: ${POSTGRES_DB_URL}
     username: ${POSTGRES_USERNAME}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update # For development. Use 'validate' or 'none' in production
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
         "[format_sql]": true
+  flyway:
+    enabled: false
 
 server:
   port: 6060
@@ -62,3 +64,6 @@ keycloak:
   client-id: ${KEYCLOAK_CLIENT_ID}
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
   application-realm: ${KEYCLOAK_APPLICATION_REALM}
+
+tenant:
+  root: ${POSTGRES_DEFAULT_DB}

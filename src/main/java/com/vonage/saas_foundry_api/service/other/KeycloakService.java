@@ -4,6 +4,7 @@ import java.util.List;
 import org.apache.http.HttpStatus;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.slf4j.Logger;
@@ -28,6 +29,14 @@ public class KeycloakService {
     userRepresentation.setFirstName(keycloakUserDto.getFirstName());
     userRepresentation.setLastName(keycloakUserDto.getLastName());
     userRepresentation.setEnabled(true);
+
+    CredentialRepresentation credentialRepresentation = new CredentialRepresentation();
+    credentialRepresentation.setTemporary(true);
+    credentialRepresentation.setType(CredentialRepresentation.PASSWORD);
+    // TODO: To be removed when email is integrated in Keycloak.
+    credentialRepresentation.setValue("123456789");
+
+    userRepresentation.setCredentials(List.of(credentialRepresentation));
 
     boolean status = false;
 

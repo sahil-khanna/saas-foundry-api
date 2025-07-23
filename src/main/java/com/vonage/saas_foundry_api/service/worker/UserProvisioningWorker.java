@@ -11,74 +11,83 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vonage.saas_foundry_api.common.QueueNames;
+import com.vonage.saas_foundry_api.config.database.TenantQueryRunner;
 import com.vonage.saas_foundry_api.database.entity.UserEntity;
-import com.vonage.saas_foundry_api.database.repository.UserRepository;
 import com.vonage.saas_foundry_api.dto.request.KeycloakUserDto;
 import com.vonage.saas_foundry_api.dto.request.SendEmailDto;
+import com.vonage.saas_foundry_api.enums.TenantType;
 import com.vonage.saas_foundry_api.mapper.UserMapper;
 import com.vonage.saas_foundry_api.service.other.EmailService;
 import com.vonage.saas_foundry_api.service.other.KeycloakService;
 import com.vonage.saas_foundry_api.service.queue.UserProvisioningEvent;
+import com.vonage.saas_foundry_api.utils.TenantUtils;
 import com.vonage.saas_foundry_api.utils.UserUtils;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class UserProvisioningWorker {
 
   private final KeycloakService keycloakService;
   private final EmailService emailService;
   private final UserUtils userUtils;
-  private final UserRepository userRepository;
+  private final TenantQueryRunner tenantQueryRunner;
   private static final Logger logger = LoggerFactory.getLogger(UserProvisioningWorker.class);
 
   @RabbitListener(queues = QueueNames.USER_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionUser(String json) throws JsonProcessingException {
     UserProvisioningEvent event = UserMapper.toUserProvisioningEvent(json);
-    UserEntity userEntity = userUtils.findUserById(event.getId());
+
+    String clientTenantName = TenantUtils.getTenantDatabaseName(event.getClientUid(), TenantType.CLIENT);
+
+    UserEntity userEntity = userUtils.findUserById(clientTenantName, event.getId());
 
     if (!userEntity.isKeycloakUserProvisioned()) {
-      createKeycloakUser(userEntity);
+      createKeycloakUser(clientTenantName, userEntity, event.getClientUid());
     }
 
     if (!userEntity.isWelcomeEmailSent()) {
-      sendWelcomeEmail(userEntity);
+      sendWelcomeEmail(clientTenantName, userEntity);
     }
   }
 
-  private void createKeycloakUser(UserEntity userEntity) {
-    userEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
-
+  private void createKeycloakUser(String clientTenantName, UserEntity userEntity, String clientUid) {
     KeycloakUserDto keycloakUserDto = KeycloakUserDto.builder()
         .username(userEntity.getEmail())
         .email(userEntity.getEmail())
         .firstName(userEntity.getFirstName())
         .lastName(userEntity.getLastName())
-        .realm(userEntity.getClient().getUid())
+        .realm(clientUid)
         .build();
     boolean isCreated = keycloakService.createUser(keycloakUserDto);
+    userEntity.setKeycloakUserProvisioned(isCreated);
+    userEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
+
+    updateUserEntity(clientTenantName, userEntity);
 
     if (!isCreated) {
-      userRepository.save(userEntity);
       throw new CannotCreateTransactionException("Could not create a client user in Keycloak");
     }
-
-    userEntity.setKeycloakUserProvisioned(true);
-    userRepository.save(userEntity);
   }
 
-  private void sendWelcomeEmail(UserEntity userEntity) {
-    userEntity.setWelcomeEmailAttemptedOn(Instant.now());
+  private void sendWelcomeEmail(String clientTenantName, UserEntity userEntity) {
     boolean isSent = emailService.sendEmail(new SendEmailDto(userEntity.getEmail(), "Hello World"));
+    userEntity.setWelcomeEmailSent(isSent);
+    userEntity.setWelcomeEmailAttemptedOn(Instant.now());
+
+    updateUserEntity(clientTenantName, userEntity);
 
     if (!isSent) {
-      userRepository.save(userEntity);
       throw new CannotCreateTransactionException("Could not send welcome email to user");
     }
+  }
 
-    userEntity.setWelcomeEmailSent(true);
-    userRepository.save(userEntity);
+  private void updateUserEntity(String clientTenantName, UserEntity userEntity) {
+    tenantQueryRunner.runInTenant(clientTenantName, entityManager -> {
+      entityManager.merge(userEntity);
+      return null;
+    });
   }
 
   @Recover

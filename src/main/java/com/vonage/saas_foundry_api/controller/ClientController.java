@@ -29,7 +29,7 @@ public class ClientController {
   @PostMapping
   @Operation(description = "Create a client")
   public ResponseEntity<String> createClient(@PathVariable String orgUid, @RequestBody ClientDto clientDto) {
-    clientService.createUser(orgUid, clientDto);
+    clientService.createClient(orgUid, clientDto);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
 
@@ -43,15 +43,15 @@ public class ClientController {
     return ResponseEntity.ok().body(clientService.listClients(orgUid, page, size));
   }
 
-  @PostMapping("/{clientUid}/user")
+  @PostMapping("/{clientUid}/users")
   @Operation(description = "Create a user")
   public ResponseEntity<String> createUser(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestBody UserDto userDto) {
-    clientService.createUser(orgUid, clientUid, userDto);
+    clientService.createUser(clientUid, userDto);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
 
-  @GetMapping("/{clientUid}/user")
+  @GetMapping("/{clientUid}/users")
   @Operation(summary = "Get users", parameters = {
       @Parameter(name = "page", required = true, example = "0"),
       @Parameter(name = "size", required = true, example = "20")
@@ -59,7 +59,6 @@ public class ClientController {
   public ResponseEntity<UsersDto> listUsers(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
-    clientService.listUsers(orgUid, clientUid, page, size);
-    return ResponseEntity.ok().body(clientService.listUsers(orgUid, clientUid, page, size));
+    return ResponseEntity.ok().body(clientService.listUsers(clientUid, page, size));
   }
 }

@@ -6,28 +6,19 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.persistence.Index;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_user_client_uid", columnList = "client_uid")
-})
+@Table(name = "users")
 public class UserEntity extends EntityBase {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private long id;
-
-  @ManyToOne
-  @JoinColumn(name = "client_uid", nullable = false)
-  private ClientEntity client;
 
   @Column(length = 50, name = "first_name")
   private String firstName;

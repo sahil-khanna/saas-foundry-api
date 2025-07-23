@@ -1,24 +1,25 @@
 package com.vonage.saas_foundry_api.utils;
 
-import java.util.Optional;
 import org.springframework.stereotype.Service;
+import com.vonage.saas_foundry_api.config.database.TenantQueryRunner;
+import com.vonage.saas_foundry_api.config.properties.TenantProperties;
 import com.vonage.saas_foundry_api.database.entity.OrganizationEntity;
-import com.vonage.saas_foundry_api.database.repository.OrganizationRepository;
-import jakarta.ws.rs.NotFoundException;
-import lombok.AllArgsConstructor;
+import com.vonage.saas_foundry_api.exception.ResourceNotFoundException;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class OrganizationUtils {
 
-  private final OrganizationRepository organizationRepository;
+  private final TenantProperties tenantProperties;
+  private final TenantQueryRunner tenantQueryRunner;
   
   public OrganizationEntity findOrgByUid(String orgUid) {
-    Optional<OrganizationEntity> optionalOrganizationEntity = organizationRepository.findById(orgUid);
-    if (optionalOrganizationEntity.isEmpty()) {
-      throw new NotFoundException("Organization not found");
-    }
-
-    return optionalOrganizationEntity.get();
+    return tenantQueryRunner.runInTenant(tenantProperties.getRoot(), entityManager -> entityManager.createQuery(
+        "FROM OrganizationEntity o WHERE o.uid = :uid", OrganizationEntity.class)
+        .setParameter("uid", orgUid)
+        .getResultStream()
+        .findFirst()
+        .orElseThrow(() -> new ResourceNotFoundException("Organization not found")));
   }
 }

@@ -2,23 +2,21 @@ package com.vonage.saas_foundry_api.utils;
 
 import java.util.Optional;
 import org.springframework.stereotype.Service;
+import com.vonage.saas_foundry_api.config.database.TenantQueryRunner;
 import com.vonage.saas_foundry_api.database.entity.ClientEntity;
-import com.vonage.saas_foundry_api.database.repository.ClientRepository;
 import jakarta.ws.rs.NotFoundException;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class ClientUtils {
 
-  private final ClientRepository clientRepository;
+  private final TenantQueryRunner tenantQueryRunner;
 
-  public ClientEntity findClientByUid(String clientUid) {
-    Optional<ClientEntity> optionalClientEntity = clientRepository.findById(clientUid);
-    if (optionalClientEntity.isEmpty()) {
-      throw new NotFoundException("Client not found");
-    }
-
-    return optionalClientEntity.get();
+  public ClientEntity findClientByUid(String tenantName, String clientUid) {
+    return tenantQueryRunner.runInTenant(
+        tenantName,
+        entityManager -> Optional.ofNullable(entityManager.find(ClientEntity.class, clientUid))
+            .orElseThrow(() -> new NotFoundException("Client not found")));
   }
 }

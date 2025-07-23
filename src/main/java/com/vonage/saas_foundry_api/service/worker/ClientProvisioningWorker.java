@@ -4,7 +4,6 @@ import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -12,78 +11,75 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.vonage.saas_foundry_api.common.QueueNames;
+import com.vonage.saas_foundry_api.config.database.TenantQueryRunner;
 import com.vonage.saas_foundry_api.database.entity.ClientEntity;
-import com.vonage.saas_foundry_api.database.repository.ClientRepository;
 import com.vonage.saas_foundry_api.dto.request.KeycloakRealmDto;
 import com.vonage.saas_foundry_api.dto.request.KeycloakUserDto;
 import com.vonage.saas_foundry_api.dto.request.SendEmailDto;
-import com.vonage.saas_foundry_api.mapper.TenantMapper;
+import com.vonage.saas_foundry_api.enums.TenantType;
+import com.vonage.saas_foundry_api.mapper.ClientMapper;
+import com.vonage.saas_foundry_api.service.other.DatabaseService;
 import com.vonage.saas_foundry_api.service.other.EmailService;
+import com.vonage.saas_foundry_api.service.other.TenantDbMigrationService;
 import com.vonage.saas_foundry_api.service.other.KeycloakService;
-import com.vonage.saas_foundry_api.service.queue.TenantProvisioningEvent;
+import com.vonage.saas_foundry_api.service.queue.ClientProvisioningEvent;
 import com.vonage.saas_foundry_api.utils.ClientUtils;
-import lombok.AllArgsConstructor;
+import com.vonage.saas_foundry_api.utils.TenantUtils;
+import com.vonage.saas_foundry_api.utils.ThreadUtils;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class ClientProvisioningWorker {
 
-  private final ClientRepository clientRepository;
+  private final TenantQueryRunner tenantQueryRunner;
   private final KeycloakService keycloakService;
   private final EmailService emailService;
-  private final JdbcTemplate jdbcTemplate;
+  private final DatabaseService databaseService;
   private final ClientUtils clientUtils;
+  private final TenantDbMigrationService tenantDbMigrationService;
   private static final Logger logger = LoggerFactory.getLogger(ClientProvisioningWorker.class);
 
   @RabbitListener(queues = QueueNames.CLIENT_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionClient(String json) throws JsonProcessingException {
-    TenantProvisioningEvent event = TenantMapper.toTenantProvisioningEvent(json);
-    ClientEntity clientEntity = clientUtils.findClientByUid(event.getUid());
+    ClientProvisioningEvent event = ClientMapper.toProvisioningEvent(json);
+
+    String orgTenantName = TenantUtils.getTenantDatabaseName(event.getOrgUid(), TenantType.ORGANIZATION);
+    ClientEntity clientEntity = clientUtils.findClientByUid(orgTenantName, event.getUid());
 
     if (!clientEntity.isKeycloakRealmProvisioned()) {
-      createKeycloakRealm(clientEntity);
-    }
-
-    if (!clientEntity.isDbProvisioned()) {
-      createDatabase(clientEntity);
-    }
-
-    try {
-      logger.info("Sleeping for 10 sec before creating user {} for realm {}", clientEntity.getAdminEmail(), clientEntity.getUid());
-      Thread.sleep(10000);
-    } catch (InterruptedException e) {
-      logger.error("Thread was interrupted: {}", e.getLocalizedMessage());
-      Thread.currentThread().interrupt();
+      createKeycloakRealm(orgTenantName, clientEntity);
     }
 
     if (!clientEntity.isKeycloakUserProvisioned()) {
-      createKeycloakUser(clientEntity);
+      ThreadUtils.sleep(10000, "Sleeping for 10 sec before creating user " + clientEntity.getAdminEmail()
+          + " for realm " + clientEntity.getUid());
+      createKeycloakUser(orgTenantName, clientEntity);
+    }
+
+    if (!clientEntity.isDbProvisioned()) {
+      createDatabase(orgTenantName, clientEntity);
     }
 
     if (!clientEntity.isWelcomeEmailSent()) {
-      sendWelcomeEmail(clientEntity);
+      sendWelcomeEmail(orgTenantName, clientEntity);
     }
   }
 
-  private void createKeycloakRealm(ClientEntity clientEntity) {
+  private void createKeycloakRealm(String orgTenantName, ClientEntity clientEntity) {
+    boolean isCreated = keycloakService.createRealm(new KeycloakRealmDto(clientEntity.getUid(), clientEntity.getName()));
+    clientEntity.setKeycloakRealmProvisioned(isCreated);
     clientEntity.setKeycloakRealmProvisionAttemptedOn(Instant.now());
 
-    boolean isCreated = keycloakService
-        .createRealm(new KeycloakRealmDto(clientEntity.getUid(), clientEntity.getName()));
+    updateClientEntity(orgTenantName, clientEntity);
 
     if (!isCreated) {
-      clientRepository.save(clientEntity);
       throw new CannotCreateTransactionException("Could not create a Keycloak Realm");
     }
-
-    clientEntity.setKeycloakRealmProvisioned(true);
-    clientRepository.save(clientEntity);
   }
 
-  private void createKeycloakUser(ClientEntity clientEntity) {
-    clientEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
-
+  private void createKeycloakUser(String orgTenantName, ClientEntity clientEntity) {
     KeycloakUserDto keycloakUserDto = KeycloakUserDto.builder()
         .username(clientEntity.getAdminEmail())
         .email(clientEntity.getAdminEmail())
@@ -91,48 +87,49 @@ public class ClientProvisioningWorker {
         .lastName("Admin")
         .realm(clientEntity.getUid())
         .build();
+
     boolean isCreated = keycloakService.createUser(keycloakUserDto);
+    clientEntity.setKeycloakUserProvisioned(isCreated);
+    clientEntity.setKeycloakUserProvisionAttemptedOn(Instant.now());
+
+    updateClientEntity(orgTenantName, clientEntity);
 
     if (!isCreated) {
-      clientRepository.save(clientEntity);
       throw new CannotCreateTransactionException("Could not create a client admin user in Keycloak");
     }
-
-    clientEntity.setKeycloakUserProvisioned(true);
-    clientRepository.save(clientEntity);
   }
 
-  private void sendWelcomeEmail(ClientEntity clientEntity) {
-    clientEntity.setWelcomeEmailAttemptedOn(Instant.now());
+  private void sendWelcomeEmail(String orgTenantName, ClientEntity clientEntity) {
     boolean isSent = emailService.sendEmail(new SendEmailDto(clientEntity.getAdminEmail(), "Hello World"));
 
+    clientEntity.setWelcomeEmailSent(isSent);
+    clientEntity.setWelcomeEmailAttemptedOn(Instant.now());
+
+    updateClientEntity(orgTenantName, clientEntity);
+
     if (!isSent) {
-      clientRepository.save(clientEntity);
       throw new CannotCreateTransactionException("Could not send welcome email to user");
     }
+  }
+  
+  private void createDatabase(String orgTenantName, ClientEntity clientEntity) {
+    String dbName = TenantUtils.getTenantDatabaseName(clientEntity.getUid(), TenantType.CLIENT);
+    databaseService.createDatabase(dbName);
+    clientEntity.setDbProvisioned(true);
+    clientEntity.setDbProvisionAttemptedOn(Instant.now());
 
-    clientEntity.setWelcomeEmailSent(true);
-    clientRepository.save(clientEntity);
+    ThreadUtils.sleep(10000, "Sleeping for 5 seconds before migrating schema to the new database.");
+
+    tenantDbMigrationService.migrate(dbName, TenantType.CLIENT);
+
+    updateClientEntity(orgTenantName, clientEntity);
   }
 
-  private void createDatabase(ClientEntity clientEntity) {
-    String dbName = String.format("\"%s\"", clientEntity.getUid());
-    Integer count = jdbcTemplate.queryForObject(
-        "SELECT COUNT(*) FROM pg_database WHERE datname = ?",
-        Integer.class,
-        dbName);
-    boolean exists = count != null && count > 0;
-
-    if (!exists) {
-      jdbcTemplate.execute("CREATE DATABASE " + dbName);
-      logger.info("Database {} created.", dbName);
-    } else {
-      logger.error("Database {} already exists.", dbName);
-    }
-
-    clientEntity.setDbProvisionAttemptedOn(Instant.now());
-    clientEntity.setDbProvisioned(true);
-    clientRepository.save(clientEntity);
+  private void updateClientEntity(String orgTenantName, ClientEntity clientEntity) {
+    tenantQueryRunner.runInTenant(orgTenantName, entityManager -> {
+      entityManager.merge(clientEntity);
+      return null;
+    });
   }
 
   @Recover

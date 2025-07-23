@@ -3,29 +3,24 @@ package com.vonage.saas_foundry_api.config;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.vonage.saas_foundry_api.config.properties.KeycloakProperties;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 @Configuration
 public class KeycloakAdminConfig {
 
-  @Value("${keycloak.url}")
-  private String serverUrl;
-
-  @Value("${keycloak.client-id}")
-  private String clientId;
-
-  @Value("${keycloak.client-secret}")
-  private String clientSecret;
+  private final KeycloakProperties keycloakProperties;
 
   @Bean
   public Keycloak keycloakAdminClient() {
     return KeycloakBuilder.builder()
-        .serverUrl(serverUrl)
+        .serverUrl(keycloakProperties.getUrl())
         .realm("master")
-        .clientId(clientId)
-        .clientSecret(clientSecret)
+        .clientId(keycloakProperties.getClientId())
+        .clientSecret(keycloakProperties.getClientSecret())
         .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
         .build();
   }

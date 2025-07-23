@@ -9,12 +9,11 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class UserProvisioningEvent implements QueueEvent {
+public class OrganizationProvisioningEvent implements QueueEvent {
 
-  private long id;
-  private String clientUid;
+  private String uid;
 
-  UserProvisioningEvent() {
+  OrganizationProvisioningEvent() {
     super();
   }
 
@@ -22,7 +21,7 @@ public class UserProvisioningEvent implements QueueEvent {
   public String toString() {
     ObjectMapper objectMapper = new ObjectMapper();
     try {
-      return objectMapper.writeValueAsString(Map.of("id", id, "clientUid", clientUid));
+      return objectMapper.writeValueAsString(Map.of("uid", uid));
     } catch (Exception e) {
       return "{}";
     }

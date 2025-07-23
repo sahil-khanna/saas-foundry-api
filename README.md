@@ -67,15 +67,14 @@ Edit .prod.env with your environment-specific credentials and keys.
 
 #### 🔧 Setup prerequisites
 ```
-docker network create --driver bridge saas-network
-export $(cat .prod.env | xargs)
-docker-compose -f ./deployment/docker-compose-dependencies.yml up -d
-
-# Wait for 30 seconds
-chmod +x ./deployment/keycloak-init/init.sh
-docker cp ./deployment/keycloak-init/init.sh keycloak:/tmp/
-docker exec -it keycloak bash /tmp/init.sh
+chmod +x setup.sh
+./setup.sh
 ```
+
+#### 🔧 Copy Keycloak client-secret
+- Login to Keycloak admin panel.
+- `master` realm > `clients` > `saas-admin` > `Credentials`.
+- Copy the `Client Secret` and paste in `KEYCLOAK_CLIENT_SECRET` of the environment files.
 
 #### 🔧 Start the Service
 

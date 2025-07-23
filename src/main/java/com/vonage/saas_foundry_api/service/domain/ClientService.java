@@ -1,93 +1,128 @@
 package com.vonage.saas_foundry_api.service.domain;
 
 import java.util.List;
-import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import com.vonage.saas_foundry_api.common.QueueNames;
+import com.vonage.saas_foundry_api.config.database.TenantQueryRunner;
+import com.vonage.saas_foundry_api.config.properties.TenantProperties;
 import com.vonage.saas_foundry_api.database.entity.ClientEntity;
-import com.vonage.saas_foundry_api.database.entity.OrganizationEntity;
 import com.vonage.saas_foundry_api.database.entity.UserEntity;
-import com.vonage.saas_foundry_api.database.repository.ClientRepository;
-import com.vonage.saas_foundry_api.database.repository.UserRepository;
 import com.vonage.saas_foundry_api.dto.request.ClientDto;
 import com.vonage.saas_foundry_api.dto.request.UserDto;
 import com.vonage.saas_foundry_api.dto.response.ClientsDto;
 import com.vonage.saas_foundry_api.dto.response.UsersDto;
+import com.vonage.saas_foundry_api.enums.TenantType;
 import com.vonage.saas_foundry_api.exception.DuplicateResourceException;
+import com.vonage.saas_foundry_api.exception.ResourceNotFoundException;
 import com.vonage.saas_foundry_api.mapper.ClientMapper;
 import com.vonage.saas_foundry_api.mapper.UserMapper;
+import com.vonage.saas_foundry_api.service.queue.ClientProvisioningEvent;
 import com.vonage.saas_foundry_api.service.queue.MessageQueue;
-import com.vonage.saas_foundry_api.service.queue.TenantProvisioningEvent;
 import com.vonage.saas_foundry_api.service.queue.UserProvisioningEvent;
-import lombok.AllArgsConstructor;
-import com.vonage.saas_foundry_api.utils.OrganizationUtils;
-import jakarta.ws.rs.NotFoundException;
+import com.vonage.saas_foundry_api.utils.TenantUtils;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class ClientService {
 
-  private final ClientRepository clientRepository;
-  private final UserRepository userRepository;
   private final MessageQueue messageQueue;
-  private final OrganizationUtils organizationUtils;
+  private final TenantQueryRunner tenantQueryRunner;
+  private final TenantProperties tenantProperties;
 
-  public void createUser(String orgUid, ClientDto clientDto) {
-    if (clientRepository.existsByNameAndOrganization_Uid(clientDto.getName(), orgUid)) {
-      throw new DuplicateResourceException("Client already added by the organization");
-    }
+  public void createClient(String orgUid, ClientDto clientDto) {
+    String tenantName = TenantUtils.getTenantDatabaseName(orgUid, TenantType.ORGANIZATION);
 
-    OrganizationEntity organizationEntity = organizationUtils.findOrgByUid(orgUid);
-    ClientEntity clientEntity = ClientMapper.toEntity(organizationEntity, clientDto);
-    clientRepository.save(clientEntity);
+    tenantQueryRunner.runInTenant(tenantName, entityManager -> {
+      entityManager.createQuery(
+          "FROM ClientEntity c WHERE c.name = :name", ClientEntity.class)
+          .setParameter("name", clientDto.getName())
+          .setMaxResults(1)
+          .getResultStream()
+          .findFirst()
+          .ifPresent(c -> {
+            throw new DuplicateResourceException("Client already added by the organization");
+          });
 
-    TenantProvisioningEvent tenantProvisioningEvent = new TenantProvisioningEvent(clientEntity.getUid());
-    messageQueue.sendMessage(QueueNames.CLIENT_PROVISIONING_QUEUE, tenantProvisioningEvent);
+      ClientEntity entity = ClientMapper.toEntity(clientDto);
+      entityManager.persist(entity);
+
+      ClientProvisioningEvent event = new ClientProvisioningEvent(entity.getUid(), orgUid);
+      messageQueue.sendMessage(QueueNames.CLIENT_PROVISIONING_QUEUE, event);
+      return null;
+    });
   }
-  
+
   public ClientsDto listClients(String orgUid, int page, int size) {
-    OrganizationEntity organizationEntity = organizationUtils.findOrgByUid(orgUid);
+    tenantQueryRunner.runInTenant(tenantProperties.getRoot(), entityManager -> {
+      boolean exists = entityManager.createQuery(
+          "SELECT COUNT(o) FROM OrganizationEntity o WHERE o.uid = :uid", Long.class)
+          .setParameter("uid", orgUid)
+          .getSingleResult() > 0;
 
-    Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
-    Pageable pageable = PageRequest.of(page, size, sort);
-    Page<ClientEntity> clientsPage = clientRepository.findAllByOrganization(organizationEntity, pageable);
-    List<ClientDto> dtoList = clientsPage.stream().map(ClientMapper::toDto).toList();
+      if (!exists) {
+        throw new ResourceNotFoundException("Organization not found");
+      }
 
-    return new ClientsDto(dtoList, clientsPage.getTotalElements());
+      return null;
+    });
+
+    String tenantName = TenantUtils.getTenantDatabaseName(orgUid, TenantType.ORGANIZATION);
+
+    return tenantQueryRunner.runInTenant(tenantName, entityManager -> {
+      List<ClientEntity> clientEntities = entityManager.createQuery(
+          "FROM ClientEntity c ORDER BY c.createdAt DESC", ClientEntity.class)
+          .setFirstResult(page * size)
+          .setMaxResults(size)
+          .getResultList();
+
+      long total = entityManager.createQuery(
+          "SELECT COUNT(c) FROM ClientEntity c", Long.class)
+          .getSingleResult();
+
+      List<ClientDto> dtoList = clientEntities.stream().map(ClientMapper::toDto).toList();
+      return new ClientsDto(dtoList, total);
+    });
   }
 
-  public void createUser(String orgUid, String clientUid, UserDto userDto) {
-    Optional<ClientEntity> optionalClientEntity = clientRepository.findByUidAndOrganization_Uid(clientUid, orgUid);
-    if (optionalClientEntity.isEmpty()) {
-      throw new NotFoundException("Client not found");
-    }
+  public void createUser(String clientUid, UserDto userDto) {
+    String tenantName = TenantUtils.getTenantDatabaseName(clientUid, TenantType.CLIENT);
 
-    if (userRepository.existsByEmailAndClient_Uid(userDto.getEmail(), clientUid)) {
-      throw new DuplicateResourceException("User already exists");
-    }
+    tenantQueryRunner.runInTenant(tenantName, entityManager -> {
+      entityManager.createQuery(
+          "FROM UserEntity u WHERE u.email = :email", UserEntity.class)
+          .setParameter("email", userDto.getEmail())
+          .setMaxResults(1)
+          .getResultStream()
+          .findFirst()
+          .ifPresent(user -> {
+            throw new DuplicateResourceException("User already exists");
+          });
 
-    UserEntity userEntity = UserMapper.toUserEntity(optionalClientEntity.get(), userDto);
-    userRepository.save(userEntity);
+      UserEntity user = UserMapper.toUserEntity(userDto);
+      entityManager.persist(user);
 
-    UserProvisioningEvent userProvisioningEvent = new UserProvisioningEvent(userEntity.getId());
-    messageQueue.sendMessage(QueueNames.USER_PROVISIONING_QUEUE, userProvisioningEvent);
+      UserProvisioningEvent event = new UserProvisioningEvent(user.getId(), clientUid);
+      messageQueue.sendMessage(QueueNames.USER_PROVISIONING_QUEUE, event);
+      return null;
+    });
   }
-  
-  public UsersDto listUsers(String orgUid, String clientUid, int page, int size) {
-    Optional<ClientEntity> optionalClientEntity = clientRepository.findByUidAndOrganization_Uid(clientUid, orgUid);
-    if (optionalClientEntity.isEmpty()) {
-      throw new NotFoundException("Client not found");
-    }
 
-    Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
-    Pageable pageable = PageRequest.of(page, size, sort);
-    Page<UserEntity> usersPage = userRepository.findAllByClient(optionalClientEntity.get(), pageable);
-    List<UserDto> dtoList = usersPage.stream().map(UserMapper::toDto).toList();
+  public UsersDto listUsers(String clientUid, int page, int size) {
+    String tenantName = TenantUtils.getTenantDatabaseName(clientUid, TenantType.CLIENT);
 
-    return new UsersDto(dtoList, usersPage.getTotalElements());
+    return tenantQueryRunner.runInTenant(tenantName, entityManager -> {
+      List<UserEntity> userEntities = entityManager
+          .createQuery("FROM UserEntity u ORDER BY u.createdAt DESC", UserEntity.class)
+          .setFirstResult(page * size)
+          .setMaxResults(size)
+          .getResultList();
+
+      long total = entityManager.createQuery("SELECT COUNT(u) FROM UserEntity u", Long.class)
+          .getSingleResult();
+
+      List<UserDto> dtoList = userEntities.stream().map(UserMapper::toDto).toList();
+      return new UsersDto(dtoList, total);
+    });
   }
 }

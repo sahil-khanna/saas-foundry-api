@@ -33,7 +33,7 @@ public class KeycloakService {
     userRepresentation.setEnabled(true);
 
     CredentialRepresentation credentialRepresentation = new CredentialRepresentation();
-    credentialRepresentation.setTemporary(true);
+    credentialRepresentation.setTemporary(false);
     credentialRepresentation.setType(CredentialRepresentation.PASSWORD);
     // TODO: To be removed when email is integrated in Keycloak.
     credentialRepresentation.setValue("123456789");

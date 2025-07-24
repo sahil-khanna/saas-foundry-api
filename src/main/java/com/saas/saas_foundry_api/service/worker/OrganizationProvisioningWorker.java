@@ -69,7 +69,7 @@ public class OrganizationProvisioningWorker {
         .email(organizationEntity.getAdminEmail())
         .firstName("Admin")
         .lastName("Admin")
-        .realm(keycloakProperties.getApplicationRealm())
+        .realm(keycloakProperties.getOrganizationRealm())
         .build();
 
     boolean isCreated = keycloakService.createUser(keycloakUserDto);

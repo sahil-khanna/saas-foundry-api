@@ -13,5 +13,5 @@ public class KeycloakProperties {
   private String url;
   private String clientId;
   private String clientSecret;
-  private String applicationRealm;
+  private String organizationRealm;
 }

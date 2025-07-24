@@ -95,21 +95,32 @@ docker-compose up -d --build
 
 ---
 
-### 🔐 Generate Access Token (Admin)
-
-Replace `<USERNAME>` and `<PASSWORD>` with the values of `KEYCLOAK_APPLICATION_ADMIN_USERNAME` and `KEYCLOAK_APPLICATION_ADMIN_PASSWORD` set in your `.env`:
+### 🔐 Generate Access Token
+#### SaaS Admin
+To create Organizations, the SaaS Admin can login with the below request. Replace `<USERNAME>` and `<PASSWORD>` with the values of `KEYCLOAK_SAAS_ADMIN_USERNAME` and `KEYCLOAK_SAAS_ADMIN_PASSWORD` set in your `.env`:
 
 ```bash
 curl --location --request POST 'http://localhost:8070/realms/master/protocol/openid-connect/token' \
    --header 'Content-Type: application/x-www-form-urlencoded' \
    --data-urlencode 'grant_type=password' \
-   --data-urlencode 'client_id=admin-cli' \
+   --data-urlencode 'client_id=saas-admin' \
    --data-urlencode 'username=<USERNAME>' \
    --data-urlencode 'password=<PASSWORD>'
 ```
 
-Use the `access_token` returned in the Authorization header for API requests.
+#### Organization Admin
+To create Clients, the Organization Admin can login with the below request.
 
+```bash
+curl --location --request POST 'http://localhost:8070/realms/saas-organization/protocol/openid-connect/token' \
+   --header 'Content-Type: application/x-www-form-urlencoded' \
+   --data-urlencode 'grant_type=password' \
+   --data-urlencode 'client_id=organization-adminx' \
+   --data-urlencode 'username=<USERNAME>' \
+   --data-urlencode 'password=<PASSWORD>'
+```
+
+Note: These requests are only for authentication. Not authorizatioň
 ---
 
 ### 📡 Example API Request

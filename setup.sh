@@ -10,7 +10,7 @@ docker-compose -f ./deployment/docker-compose-dependencies.yml up -d
 # Wait for Keycloak to become healthy or ready
 echo "Waiting for Keycloak to become ready..."
 
-sleep 30
+sleep 15
 
 # echo "Keycloak is ready. Proceeding with init script..."
 

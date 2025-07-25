@@ -109,7 +109,7 @@ echo "✅ Master realm setup complete."
 # --------------------------
 
 echo "🆕 Creating realm '$ORGANIZATION_REALM'..."
-/opt/keycloak/bin/kcadm.sh create realms -s realm="$ORGANIZATION_REALM" -s enabled=true -s name="SaaS Organization"
+/opt/keycloak/bin/kcadm.sh create realms -s realm="$ORGANIZATION_REALM" -s enabled=true -s displayName="SaaS Organization"
 
 if [[ $? -ne 0 ]]; then
   echo "❌ Failed to create realm '$ORGANIZATION_REALM'."

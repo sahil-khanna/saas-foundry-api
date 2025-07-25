@@ -1,33 +1,31 @@
 package com.saas.saas_foundry_api.config;
 
-import org.springframework.context.annotation.Bean;
+import com.saas.saas_foundry_api.config.properties.KeycloakProperties;
+import com.saas.saas_foundry_api.context.RequestContext;
+import com.saas.saas_foundry_api.filter.JwtRealmFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+  private final RequestContext requestContext;
+  private final KeycloakProperties keycloakProperties;
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http
         .csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers(
-                "/swagger-ui/**",
-                "/swagger-ui.html",
-                "/v3/api-docs/**",
-                "/actuator/*")
-            .permitAll()
-            .anyRequest().authenticated())
-        .oauth2ResourceServer(oauth2 -> oauth2
-            .jwt(jwt -> {
-              // Optional: customize jwtDecoder, jwtAuthenticationConverter, etc.
-            }));
+            .anyRequest().permitAll())
+        .addFilterBefore(new JwtRealmFilter(requestContext, keycloakProperties),
+            UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }
-
 }

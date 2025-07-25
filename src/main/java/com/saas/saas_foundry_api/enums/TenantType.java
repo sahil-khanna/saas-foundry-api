@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 public enum TenantType {
 
   ORGANIZATION("organization"),
-  CLIENT("client");
+  CLIENT("client"),
+  SUPER_ADMIN("super-admin");
 
   private final String value;
 }

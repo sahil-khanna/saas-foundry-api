@@ -9,28 +9,30 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import com.saas.saas_foundry_api.context.RequestContext;
 import com.saas.saas_foundry_api.dto.request.ClientDto;
 import com.saas.saas_foundry_api.dto.request.UserDto;
 import com.saas.saas_foundry_api.dto.response.ClientsDto;
 import com.saas.saas_foundry_api.dto.response.UsersDto;
 import com.saas.saas_foundry_api.service.domain.ClientService;
-
+import com.saas.saas_foundry_api.utils.TenantUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.constraints.Min;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/organizations/{orgUid}/clients")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ClientController {
 
   private final ClientService clientService;
+  private final RequestContext requestContext;
 
   @PostMapping
   @Operation(description = "Create a client")
   public ResponseEntity<String> createClient(@PathVariable String orgUid, @RequestBody ClientDto clientDto) {
+    TenantUtils.isSuperAdminAuth(requestContext);
     clientService.createClient(orgUid, clientDto);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
@@ -42,6 +44,7 @@ public class ClientController {
   @GetMapping
   public ResponseEntity<ClientsDto> listClients(@PathVariable String orgUid, @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
+    TenantUtils.isSuperAdminAuth(requestContext);
     return ResponseEntity.ok().body(clientService.listClients(orgUid, page, size));
   }
 
@@ -50,6 +53,7 @@ public class ClientController {
   public ResponseEntity<String> createUser(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestBody UserDto userDto) {
     clientService.createUser(clientUid, userDto);
+    TenantUtils.isClientAuth(requestContext);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
 
@@ -61,6 +65,7 @@ public class ClientController {
   public ResponseEntity<UsersDto> listUsers(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
+    TenantUtils.isClientAuth(requestContext);
     return ResponseEntity.ok().body(clientService.listUsers(clientUid, page, size));
   }
 }

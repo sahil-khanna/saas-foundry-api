@@ -10,10 +10,8 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
 import com.saas.saas_foundry_api.dto.request.KeycloakRealmDto;
 import com.saas.saas_foundry_api.dto.request.KeycloakUserDto;
-
 import jakarta.ws.rs.core.Response;
 import lombok.AllArgsConstructor;
 
@@ -67,7 +65,7 @@ public class KeycloakService {
     realmRepresentation.setEnabled(true);
 
     ClientRepresentation clientRepresentation = new ClientRepresentation();
-    clientRepresentation.setClientId("saas-web-ui");
+    clientRepresentation.setClientId("saas-user");
     clientRepresentation.setEnabled(true);
     clientRepresentation.setRedirectUris(List.of("http://localhost:3000/*"));
     clientRepresentation.setServiceAccountsEnabled(true);

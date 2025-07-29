@@ -1,8 +1,12 @@
 package com.saas.saas_foundry_api.config.database;
 
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Component;
+import com.saas.saas_foundry_api.config.properties.DatabaseProperties;
+import lombok.RequiredArgsConstructor;
 import javax.sql.DataSource;
 import java.io.Serializable;
 import java.sql.Connection;
@@ -10,14 +14,14 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@RequiredArgsConstructor
 @Component
 public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionProvider, Serializable {
 
-  private static final long serialVersionUID = 1L;
+  private final DatabaseProperties databaseProperties;
+  private static final Logger logger = LoggerFactory.getLogger(MultiTenantConnectionProviderImpl.class);
 
-  private static final String BASE_URL = "jdbc:postgresql://localhost:5432/";
-  private static final String USERNAME = "postgres";
-  private static final String PASSWORD = "sliyRR@fPdsf3";
+  private static final long serialVersionUID = 1L;
 
   private final Map<String, DataSource> dataSourceMap = new ConcurrentHashMap<>();
 
@@ -25,16 +29,16 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
     return dataSourceMap.computeIfAbsent(tenantId, id -> {
       DriverManagerDataSource ds = new DriverManagerDataSource();
       ds.setDriverClassName("org.postgresql.Driver");
-      ds.setUrl(BASE_URL + id);
-      ds.setUsername(USERNAME);
-      ds.setPassword(PASSWORD);
+      ds.setUrl(databaseProperties.getUrl() + "/" + id);
+      ds.setUsername(databaseProperties.getUsername());
+      ds.setPassword(databaseProperties.getPassword());
       return ds;
     });
   }
 
   @Override
   public Connection getConnection(Object tenantIdentifier) throws SQLException {
-    System.out.println("🔄 Switching to tenant DB: " + tenantIdentifier);
+    logger.info("Switching to tenant DB: {}", tenantIdentifier);
     return getDataSource(tenantIdentifier.toString()).getConnection();
   }
 

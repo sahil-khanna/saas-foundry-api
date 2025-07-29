@@ -3,7 +3,6 @@ package com.saas.saas_foundry_api.config;
 import org.springframework.amqp.core.Queue;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import com.saas.saas_foundry_api.common.QueueNames;
 
 @Configuration

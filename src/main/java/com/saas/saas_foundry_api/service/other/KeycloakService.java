@@ -81,7 +81,7 @@ public class KeycloakService {
       logger.info("Created realm {} and client {}", realmRepresentation.getRealm(), clientRepresentation.getClientId());
     } catch (Exception e) {
       logger.error("Failed to create realm {} and client {}: {}", realmRepresentation.getRealm(),
-          clientRepresentation.getId(),
+          clientRepresentation.getClientId(),
           e.getMessage());
     }
 

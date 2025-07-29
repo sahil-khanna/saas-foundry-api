@@ -6,7 +6,7 @@ services:
     image: postgres
     container_name: postgres
     env_file:
-      - ../.prod.env
+      - ./.prod.env
     environment:
       - POSTGRES_USER=${POSTGRES_USERNAME}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -30,7 +30,7 @@ services:
     container_name: rabbitmq
     restart: unless-stopped
     env_file:
-      - ../.prod.env
+      - ./.prod.env
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -55,7 +55,7 @@ services:
       postgres:
         condition: service_healthy
     env_file:
-      - ../.prod.env
+      - ./.prod.env
     environment:
       KC_HOSTNAME: localhost
       KC_DB: postgres
@@ -65,7 +65,7 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_MASTER_REALM_ADMIN_USERNAME}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_MASTER_REALM_ADMIN_PASSWORD}
     ports:
-      - "8070:8080"
+      - "8080:8080"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]

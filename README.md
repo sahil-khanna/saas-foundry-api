@@ -40,34 +40,41 @@ This approach ensures **strong data isolation**, **multi-tenancy**, and **securi
 
 ## ⚙️ Setup Instructions
 
-### 📁 Environment Configuration
+#### 🔧 Prerequisites
+Ensure you have Docker and Docker Compose installed.
 
+#### Setup PostGres, RabbitMQ and Keycloak
+##### 📁 Environment Configuration
 1. Copy the environment file template:
-
    ```bash
-   cp example.env .prod.env
+   cp ./deployment/example.env ./deployment/.prod.env
    ```
 
 2. Edit `.prod.env` to include environment-specific credentials, such as DB URL, Keycloak secrets, etc.
-
----
-
-### 🐳 Docker Setup
-
-#### 🔧 Prerequisites
-
-Ensure you have Docker and Docker Compose installed.
-
-Then:
 
 ```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
-#### 🔑 Configure Keycloak Client Secret
+#### 🚀 Start Docker Containers
+```bash
+chmod +x setup.sh
+./setup.sh
+```
 
-1. Open [Keycloak Admin Console](http://localhost:8070).
+#### Setup Saas Foundry API
+##### 📁 Environment Configuration
+1. Copy the environment file template:
+   ```bash
+   cp ./example.env ./.prod.env
+   ```
+
+2. Edit `.prod.env` to include environment-specific credentials, such as DB URL, Keycloak secrets, etc.
+
+##### 🔑 Configure Keycloak Client Secret
+
+1. Open [Keycloak Admin Console](http://localhost:8080).
 2. Navigate to:
    ```
    Realm: master → Clients → saas-admin → Credentials
@@ -75,10 +82,7 @@ chmod +x setup.sh
 3. Copy the **Client Secret**.
 4. Paste it into `KEYCLOAK_CLIENT_SECRET` in `.prod.env`.
 
----
-
-#### 🚀 Start the Services
-
+#### 🚀 Start Docker Container
 Load environment variables:
 
 ```bash
@@ -100,7 +104,7 @@ docker-compose up -d --build
 To create Organizations, the SaaS Admin can login with the below request. Replace `<USERNAME>` and `<PASSWORD>` with the values of `KEYCLOAK_SAAS_ADMIN_USERNAME` and `KEYCLOAK_SAAS_ADMIN_PASSWORD` set in your `.env`:
 
 ```bash
-curl --location --request POST 'http://localhost:8070/realms/master/protocol/openid-connect/token' \
+curl --location --request POST 'http://localhost:8080/realms/master/protocol/openid-connect/token' \
    --header 'Content-Type: application/x-www-form-urlencoded' \
    --data-urlencode 'grant_type=password' \
    --data-urlencode 'client_id=saas-admin' \
@@ -112,7 +116,7 @@ curl --location --request POST 'http://localhost:8070/realms/master/protocol/ope
 To create Clients, the Organization Admin can login with the below request.
 
 ```bash
-curl --location --request POST 'http://localhost:8070/realms/saas-organization/protocol/openid-connect/token' \
+curl --location --request POST 'http://localhost:8080/realms/saas-organization/protocol/openid-connect/token' \
    --header 'Content-Type: application/x-www-form-urlencoded' \
    --data-urlencode 'grant_type=password' \
    --data-urlencode 'client_id=organization-adminx' \

@@ -2,9 +2,7 @@ package com.saas.saas_foundry_api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import com.saas.saas_foundry_api.config.database.TenantQueryRunner;
-
 import jakarta.persistence.EntityManagerFactory;
 
 @Configuration

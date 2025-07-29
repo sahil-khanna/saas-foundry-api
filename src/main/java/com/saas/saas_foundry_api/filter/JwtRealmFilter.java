@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,20 +44,29 @@ public class JwtRealmFilter extends OncePerRequestFilter {
 
     try {
       String issuer = extractIssuer(token);
-      JwtDecoder decoder = JwtDecoders.fromIssuerLocation(issuer);
-      decoder.decode(token);
       String realm = issuer.substring(issuer.lastIndexOf("/") + 1);
-      requestContext.setRealm(realm);
+
+      JwtDecoder decoder;
+      if (keycloakProperties.getUrl().startsWith("http://keycloak")) {
+        // Dev (Docker): use direct JWK URI, skip issuer validation
+        String jwkSetUri = keycloakProperties.getUrl() + "/realms/" + realm + "/protocol/openid-connect/certs";
+
+        decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+      } else {
+        // Prod: let Spring fetch metadata and validate issuer
+        decoder = JwtDecoders.fromIssuerLocation(issuer);
+      }
+
+      decoder.decode(token);
 
       if ("master".equals(realm)) {
         requestContext.setType(TenantType.SUPER_ADMIN);
-      }
-      else if (keycloakProperties.getOrganizationRealm().equals(realm)) {
+      } else if (keycloakProperties.getOrganizationRealm().equals(realm)) {
         requestContext.setType(TenantType.ORGANIZATION);
-      }
-      else {
+      } else {
         requestContext.setType(TenantType.CLIENT);
       }
+      requestContext.setRealm(realm);
     } catch (Exception e) {
       response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT");
       return;
@@ -75,16 +85,26 @@ public class JwtRealmFilter extends OncePerRequestFilter {
 
   private String extractIssuer(String token) throws IOException {
     String[] parts = token.split("\\.");
-    if (parts.length < 2)
+    if (parts.length < 2) {
       throw new IllegalArgumentException("Invalid JWT format");
+    }
 
     String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
     Map<?, ?> payloadMap = objectMapper.readValue(payload, Map.class);
 
     Object iss = payloadMap.get("iss");
-    if (iss == null)
+    if (iss == null) {
       throw new IllegalArgumentException("Missing 'iss' in JWT");
+    }
 
     return iss.toString();
+  }
+
+  @Override
+  protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+    String path = request.getRequestURI();
+    return path.startsWith("/actuator/health")
+        || path.startsWith("/api/swagger-ui/")
+        || path.startsWith("/api/v3/api-docs");
   }
 }

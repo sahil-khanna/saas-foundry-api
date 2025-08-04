@@ -18,7 +18,7 @@ public class KeycloakAdminConfig {
   public Keycloak keycloakAdminClient() {
     return KeycloakBuilder.builder()
         .serverUrl(keycloakProperties.getUrl())
-        .realm("master")
+        .realm(keycloakProperties.getMasterRealm())
         .clientId(keycloakProperties.getClientId())
         .clientSecret(keycloakProperties.getClientSecret())
         .grantType(OAuth2Constants.CLIENT_CREDENTIALS)

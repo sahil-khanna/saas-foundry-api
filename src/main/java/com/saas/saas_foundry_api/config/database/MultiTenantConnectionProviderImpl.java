@@ -28,7 +28,7 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
   private DataSource getDataSource(String tenantId) {
     return dataSourceMap.computeIfAbsent(tenantId, id -> {
       DriverManagerDataSource ds = new DriverManagerDataSource();
-      ds.setDriverClassName("org.postgresql.Driver");
+      ds.setDriverClassName(databaseProperties.getDriverClassName());
       ds.setUrl(databaseProperties.getUrl() + "/" + id);
       ds.setUsername(databaseProperties.getUsername());
       ds.setPassword(databaseProperties.getPassword());

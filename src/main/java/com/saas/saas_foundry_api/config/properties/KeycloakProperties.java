@@ -14,4 +14,5 @@ public class KeycloakProperties {
   private String clientId;
   private String clientSecret;
   private String organizationRealm;
+  private String masterRealm = "master";
 }

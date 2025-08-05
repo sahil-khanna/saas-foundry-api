@@ -1,5 +1,6 @@
 package com.saas.saas_foundry_api.utils;
 
+import java.util.List;
 import com.saas.saas_foundry_api.context.RequestContext;
 import com.saas.saas_foundry_api.enums.TenantType;
 import jakarta.ws.rs.ForbiddenException;
@@ -16,14 +17,14 @@ public class TenantUtils {
         .toLowerCase();
   }
 
-  public static void isOrganizationAuth(RequestContext requestContext) {
-    if (!requestContext.getType().equals(TenantType.ORGANIZATION)) {
+  public static void isOrganizationOrAboveAuth(RequestContext requestContext) {
+    if (!List.of(TenantType.SUPER_ADMIN, TenantType.ORGANIZATION).contains(requestContext.getType())) {
       throw new ForbiddenException();
     }
   }
 
-  public static void isClientAuth(RequestContext requestContext) {
-    if (!requestContext.getType().equals(TenantType.CLIENT)) {
+  public static void isClientOrAboveAuth(RequestContext requestContext) {
+    if (!List.of(TenantType.SUPER_ADMIN, TenantType.ORGANIZATION, TenantType.CLIENT).contains(requestContext.getType())) {
       throw new ForbiddenException();
     }
   }

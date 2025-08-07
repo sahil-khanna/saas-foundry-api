@@ -12,7 +12,7 @@ public class UserMapper {
     // Do nothing
   }
 
-  public static UserEntity toUserEntity(UserDto userDto) {
+  public static UserEntity toEntity(UserDto userDto) {
     UserEntity userEntity = new UserEntity();
     userEntity.setEmail(userDto.getEmail());
     userEntity.setFirstName(userDto.getFirstName());

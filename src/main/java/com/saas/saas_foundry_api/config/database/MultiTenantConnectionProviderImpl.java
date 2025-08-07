@@ -1,50 +1,44 @@
 package com.saas.saas_foundry_api.config.database;
 
+import lombok.RequiredArgsConstructor;
+import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.stereotype.Component;
-import com.saas.saas_foundry_api.config.properties.DatabaseProperties;
-import lombok.RequiredArgsConstructor;
+
+import com.saas.saas_foundry_api.config.properties.TenantProperties;
+
 import javax.sql.DataSource;
-import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RequiredArgsConstructor
 @Component
-public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionProvider, Serializable {
+public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionProvider, HibernatePropertiesCustomizer {
 
-  private final DatabaseProperties databaseProperties;
+  private final DataSource dataSource;
+  private final TenantProperties tenantProperties;
   private static final Logger logger = LoggerFactory.getLogger(MultiTenantConnectionProviderImpl.class);
 
-  private static final long serialVersionUID = 1L;
-
-  private final Map<String, DataSource> dataSourceMap = new ConcurrentHashMap<>();
-
-  private DataSource getDataSource(String tenantId) {
-    return dataSourceMap.computeIfAbsent(tenantId, id -> {
-      DriverManagerDataSource ds = new DriverManagerDataSource();
-      ds.setDriverClassName(databaseProperties.getDriverClassName());
-      ds.setUrl(databaseProperties.getUrl() + "/" + id);
-      ds.setUsername(databaseProperties.getUsername());
-      ds.setPassword(databaseProperties.getPassword());
-      return ds;
-    });
-  }
-
+  @SuppressWarnings("squid:S2095")
   @Override
   public Connection getConnection(Object tenantIdentifier) throws SQLException {
-    logger.info("Switching to tenant DB: {}", tenantIdentifier);
-    return getDataSource(tenantIdentifier.toString()).getConnection();
+    String tenant = TenantContext.getTenantId();
+    if (tenant == null) {
+      tenant = tenantProperties.getRoot();
+    }
+    logger.info("Switching to tenant DB: {}", tenant);
+    Connection connection = dataSource.getConnection();
+    connection.setSchema(tenant);
+    return connection;
   }
 
   @Override
   public Connection getAnyConnection() throws SQLException {
-    return getDataSource("saas").getConnection(); // default tenant DB
+    return dataSource.getConnection();
   }
 
   @Override
@@ -54,6 +48,7 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
 
   @Override
   public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {
+    connection.setSchema(tenantProperties.getRoot());
     connection.close();
   }
 
@@ -64,15 +59,16 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
 
   @Override
   public boolean isUnwrappableAs(Class<?> unwrapType) {
-    return MultiTenantConnectionProvider.class.equals(unwrapType) ||
-        MultiTenantConnectionProviderImpl.class.isAssignableFrom(unwrapType);
+    return false;
   }
 
   @Override
   public <T> T unwrap(Class<T> unwrapType) {
-    if (isUnwrappableAs(unwrapType)) {
-      return unwrapType.cast(this);
-    }
-    throw new IllegalArgumentException("Cannot unwrap to: " + unwrapType);
+    throw new UnsupportedOperationException("Can't unwrap this.");
+  }
+
+  @Override
+  public void customize(Map<String, Object> hibernateProperties) {
+    hibernateProperties.put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, this);
   }
 }

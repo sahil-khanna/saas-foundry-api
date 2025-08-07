@@ -1,71 +1,67 @@
 package com.saas.saas_foundry_api.service.domain;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
-
 import com.saas.saas_foundry_api.common.QueueNames;
-import com.saas.saas_foundry_api.config.database.TenantQueryRunner;
+import com.saas.saas_foundry_api.config.database.TenantRepositoryExecutor;
 import com.saas.saas_foundry_api.config.properties.TenantProperties;
 import com.saas.saas_foundry_api.database.entity.OrganizationEntity;
+import com.saas.saas_foundry_api.database.repository.OrganizationRepository;
 import com.saas.saas_foundry_api.dto.request.OrganizationDto;
 import com.saas.saas_foundry_api.dto.response.OrganizationsDto;
 import com.saas.saas_foundry_api.exception.DuplicateResourceException;
 import com.saas.saas_foundry_api.mapper.OrganizationMapper;
 import com.saas.saas_foundry_api.service.queue.MessageQueue;
-import com.saas.saas_foundry_api.service.queue.OrganizationProvisioningEvent;
-
+import com.saas.saas_foundry_api.service.queue.TenantProvisioningEvent;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
 public class OrganizationService {
 
-  private final TenantProperties tenantProperties;
   private final MessageQueue messageQueue;
-  private final TenantQueryRunner tenantQueryRunner;
+  private final TenantRepositoryExecutor tenantRepositoryExecutor;
+  private final TenantProperties tenantProperties;
 
   public void create(OrganizationDto organizationDto) {
-    tenantQueryRunner.runInTenant(tenantProperties.getRoot(), entityManager -> {
-      // Check for duplicate name
-      entityManager.createQuery(
-          "FROM OrganizationEntity o WHERE o.name = :name", OrganizationEntity.class)
-          .setParameter("name", organizationDto.getName())
-          .setMaxResults(1)
-          .getResultStream()
-          .findFirst()
-          .ifPresent(o -> {
-            throw new DuplicateResourceException("Organization with the same name already exists");
-          });
+    boolean organizationExists = tenantRepositoryExecutor.runInTenant(
+        tenantProperties.getRoot(),
+        OrganizationRepository.class,
+        repository -> repository.existsByName(organizationDto.getName()));
 
-      // Save new organization
-      OrganizationEntity entity = OrganizationMapper.toEntity(organizationDto);
-      entityManager.persist(entity);
+    if (organizationExists) {
+      throw new DuplicateResourceException("Organization with the same name already exists");
+    }
 
-      // Queue provisioning
-      OrganizationProvisioningEvent event = new OrganizationProvisioningEvent(entity.getUid());
-      messageQueue.sendMessage(QueueNames.ORGANIZATION_PROVISIONING_QUEUE, event);
+    OrganizationEntity organizationEntity = OrganizationMapper.toEntity(organizationDto);
+    tenantRepositoryExecutor.runInTenant(
+        tenantProperties.getRoot(),
+        OrganizationRepository.class,
+        repository -> {
+          repository.save(organizationEntity);
+          return null;
+        });
 
-      return null;
-    });
+    TenantProvisioningEvent event = new TenantProvisioningEvent(organizationEntity.getUid());
+    messageQueue.sendMessage(QueueNames.ORGANIZATION_PROVISIONING_QUEUE, event);
   }
 
   public OrganizationsDto list(int page, int size) {
-    return tenantQueryRunner.runInTenant(tenantProperties.getRoot(), entityManager -> {
-      List<OrganizationEntity> entities = entityManager.createQuery(
-          "FROM OrganizationEntity o ORDER BY o.createdAt DESC", OrganizationEntity.class)
-          .setFirstResult(page * size)
-          .setMaxResults(size)
-          .getResultList();
+    Page<OrganizationEntity> organizationsPage = tenantRepositoryExecutor.runInTenant(
+        tenantProperties.getRoot(),
+        OrganizationRepository.class,
+        repository -> {
+          Sort sort = Sort.by(Direction.ASC, "createdAt");
+          Pageable pageable = PageRequest.of(page, size, sort);
+          return repository.findAll(pageable);
+        });
 
-      long total = entityManager.createQuery(
-          "SELECT COUNT(o) FROM OrganizationEntity o", Long.class)
-          .getSingleResult();
-
-      List<OrganizationDto> dtoList = entities.stream()
-          .map(OrganizationMapper::toDto)
-          .toList();
-
-      return new OrganizationsDto(dtoList, total);
-    });
+    List<OrganizationDto> organizations = organizationsPage.stream().map(OrganizationMapper::toDto).toList();
+    return new OrganizationsDto(organizations, organizationsPage.getTotalElements());
   }
 }

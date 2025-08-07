@@ -1,12 +1,11 @@
 package com.saas.saas_foundry_api.utils;
 
 import org.springframework.stereotype.Service;
-
-import com.saas.saas_foundry_api.config.database.TenantQueryRunner;
+import com.saas.saas_foundry_api.config.database.TenantRepositoryExecutor;
 import com.saas.saas_foundry_api.config.properties.TenantProperties;
 import com.saas.saas_foundry_api.database.entity.OrganizationEntity;
+import com.saas.saas_foundry_api.database.repository.OrganizationRepository;
 import com.saas.saas_foundry_api.exception.ResourceNotFoundException;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -14,14 +13,11 @@ import lombok.RequiredArgsConstructor;
 public class OrganizationUtils {
 
   private final TenantProperties tenantProperties;
-  private final TenantQueryRunner tenantQueryRunner;
-  
+  private final TenantRepositoryExecutor tenantRepositoryExecutor;
+
   public OrganizationEntity findOrgByUid(String orgUid) {
-    return tenantQueryRunner.runInTenant(tenantProperties.getRoot(), entityManager -> entityManager.createQuery(
-        "FROM OrganizationEntity o WHERE o.uid = :uid", OrganizationEntity.class)
-        .setParameter("uid", orgUid)
-        .getResultStream()
-        .findFirst()
-        .orElseThrow(() -> new ResourceNotFoundException("Organization not found")));
+    return tenantRepositoryExecutor.runInTenant(tenantProperties.getRoot(), OrganizationRepository.class,
+        repository -> repository.findByUid(orgUid)
+            .orElseThrow(() -> new ResourceNotFoundException("Organization not found")));
   }
 }

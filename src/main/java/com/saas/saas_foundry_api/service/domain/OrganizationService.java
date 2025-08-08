@@ -29,7 +29,7 @@ public class OrganizationService {
   private final TenantProperties tenantProperties;
 
   public void create(OrganizationDto organizationDto) {
-    boolean organizationExists = tenantRepositoryExecutor.runInTenant(
+    boolean organizationExists = tenantRepositoryExecutor.execute(
         tenantProperties.getRoot(),
         OrganizationRepository.class,
         repository -> repository.existsByName(organizationDto.getName()));
@@ -39,7 +39,7 @@ public class OrganizationService {
     }
 
     OrganizationEntity organizationEntity = OrganizationMapper.toEntity(organizationDto);
-    tenantRepositoryExecutor.runInTenant(
+    tenantRepositoryExecutor.execute(
         tenantProperties.getRoot(),
         OrganizationRepository.class,
         repository -> {
@@ -52,7 +52,7 @@ public class OrganizationService {
   }
 
   public OrganizationsDto list(int page, int size) {
-    Page<OrganizationEntity> organizationsPage = tenantRepositoryExecutor.runInTenant(
+    Page<OrganizationEntity> organizationsPage = tenantRepositoryExecutor.execute(
         tenantProperties.getRoot(),
         OrganizationRepository.class,
         repository -> {

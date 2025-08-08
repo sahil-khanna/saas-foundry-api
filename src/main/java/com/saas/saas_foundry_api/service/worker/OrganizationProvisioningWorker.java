@@ -106,7 +106,7 @@ public class OrganizationProvisioningWorker {
   }
 
   private void updateOrganizationEntity(OrganizationEntity organizationEntity) {
-    tenantRepositoryExecutor.runInTenant(tenantProperties.getRoot(), OrganizationRepository.class, repository -> {
+    tenantRepositoryExecutor.execute(tenantProperties.getRoot(), OrganizationRepository.class, repository -> {
       repository.save(organizationEntity);
       return null;
     });

@@ -125,7 +125,7 @@ public class ClientProvisioningWorker {
   }
 
   private void updateClientEntity(String orgTenantName, ClientEntity clientEntity) {
-    tenantRepositoryExecutor.runInTenant(orgTenantName, ClientRepository.class, repository -> {
+    tenantRepositoryExecutor.execute(orgTenantName, ClientRepository.class, repository -> {
       repository.save(clientEntity);
       return null;
     });

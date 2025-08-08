@@ -85,7 +85,7 @@ public class UserProvisioningWorker {
   }
 
   private void updateUserEntity(String clientTenantName, UserEntity userEntity) {
-    tenantRepositoryExecutor.runInTenant(clientTenantName, UserRepository.class, repository -> {
+    tenantRepositoryExecutor.execute(clientTenantName, UserRepository.class, repository -> {
       repository.save(userEntity);
       return null;
     });

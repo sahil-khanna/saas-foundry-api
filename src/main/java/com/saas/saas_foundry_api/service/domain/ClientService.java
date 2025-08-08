@@ -37,7 +37,7 @@ public class ClientService {
   public void createClient(String orgUid, ClientDto clientDto) {
     String tenantName = TenantUtils.getTenantDatabaseName(orgUid, TenantType.ORGANIZATION);
 
-    boolean clientExists = tenantRepositoryExecutor.runInTenant(
+    boolean clientExists = tenantRepositoryExecutor.execute(
         tenantName,
         ClientRepository.class,
         repository -> repository.existsByName(clientDto.getName()));
@@ -47,7 +47,7 @@ public class ClientService {
     }
 
     ClientEntity clientEntity = ClientMapper.toEntity(clientDto);
-    tenantRepositoryExecutor.runInTenant(
+    tenantRepositoryExecutor.execute(
         tenantName,
         ClientRepository.class,
         repository -> {
@@ -62,7 +62,7 @@ public class ClientService {
   public ClientsDto listClients(String orgUid, int page, int size) {
     String tenantName = TenantUtils.getTenantDatabaseName(orgUid, TenantType.ORGANIZATION);
 
-    Page<ClientEntity> clientsPage = tenantRepositoryExecutor.runInTenant(
+    Page<ClientEntity> clientsPage = tenantRepositoryExecutor.execute(
         tenantName,
         ClientRepository.class,
         repository -> repository.findAll(PageRequest.of(page, size)));
@@ -74,7 +74,7 @@ public class ClientService {
   public void createUser(String clientUid, UserDto userDto) {
     String tenantName = TenantUtils.getTenantDatabaseName(clientUid, TenantType.CLIENT);
 
-    boolean userExists = tenantRepositoryExecutor.runInTenant(
+    boolean userExists = tenantRepositoryExecutor.execute(
         tenantName,
         UserRepository.class,
         repository -> repository.existsByEmail(userDto.getEmail()));
@@ -84,7 +84,7 @@ public class ClientService {
     }
 
     UserEntity userEntity = UserMapper.toEntity(userDto);
-    tenantRepositoryExecutor.runInTenant(
+    tenantRepositoryExecutor.execute(
         tenantName,
         UserRepository.class,
         repository -> {
@@ -99,7 +99,7 @@ public class ClientService {
   public UsersDto listUsers(String clientUid, int page, int size) {
     String tenantName = TenantUtils.getTenantDatabaseName(clientUid, TenantType.CLIENT);
 
-    Page<UserEntity> usersPage = tenantRepositoryExecutor.runInTenant(
+    Page<UserEntity> usersPage = tenantRepositoryExecutor.execute(
         tenantName,
         UserRepository.class,
         repository -> {

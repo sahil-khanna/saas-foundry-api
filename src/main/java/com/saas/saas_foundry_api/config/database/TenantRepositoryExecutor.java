@@ -14,7 +14,7 @@ public class TenantRepositoryExecutor {
 
   private final EntityManagerFactory entityManagerFactory;
 
-  public <R, T> T runInTenant(String tenantId, Class<R> repoClass, Function<R, T> logic) {
+  public <R, T> T execute(String tenantId, Class<R> repoClass, Function<R, T> logic) {
     String originalTenant = TenantContext.getTenantId();
 
     try {

@@ -14,7 +14,7 @@ public class ClientUtils {
   private final TenantRepositoryExecutor tenantRepositoryExecutor;
 
   public ClientEntity findClientByUid(String tenantName, String clientUid) {
-    return tenantRepositoryExecutor.runInTenant(
+    return tenantRepositoryExecutor.execute(
         tenantName, ClientRepository.class,
         repository -> repository.findByUid(clientUid)
             .orElseThrow(() -> new ResourceNotFoundException("Client not found")));

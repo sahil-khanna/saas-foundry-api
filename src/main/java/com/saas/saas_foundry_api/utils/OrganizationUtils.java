@@ -16,7 +16,7 @@ public class OrganizationUtils {
   private final TenantRepositoryExecutor tenantRepositoryExecutor;
 
   public OrganizationEntity findOrgByUid(String orgUid) {
-    return tenantRepositoryExecutor.runInTenant(tenantProperties.getRoot(), OrganizationRepository.class,
+    return tenantRepositoryExecutor.execute(tenantProperties.getRoot(), OrganizationRepository.class,
         repository -> repository.findByUid(orgUid)
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found")));
   }

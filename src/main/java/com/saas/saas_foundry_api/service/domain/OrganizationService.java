@@ -17,7 +17,7 @@ import com.saas.saas_foundry_api.dto.response.OrganizationsDto;
 import com.saas.saas_foundry_api.exception.DuplicateResourceException;
 import com.saas.saas_foundry_api.mapper.OrganizationMapper;
 import com.saas.saas_foundry_api.service.queue.MessageQueue;
-import com.saas.saas_foundry_api.service.queue.TenantProvisioningEvent;
+import com.saas.saas_foundry_api.service.queue.OrganizationProvisioningEvent;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -47,7 +47,7 @@ public class OrganizationService {
           return null;
         });
 
-    TenantProvisioningEvent event = new TenantProvisioningEvent(organizationEntity.getUid());
+    OrganizationProvisioningEvent event = new OrganizationProvisioningEvent(organizationEntity.getUid());
     messageQueue.sendMessage(QueueNames.ORGANIZATION_PROVISIONING_QUEUE, event);
   }
 

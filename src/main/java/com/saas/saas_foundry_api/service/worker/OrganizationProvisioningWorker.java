@@ -24,10 +24,9 @@ import com.saas.saas_foundry_api.service.other.DatabaseService;
 import com.saas.saas_foundry_api.service.other.EmailService;
 import com.saas.saas_foundry_api.service.other.KeycloakService;
 import com.saas.saas_foundry_api.service.other.TenantDbMigrationService;
-import com.saas.saas_foundry_api.service.queue.TenantProvisioningEvent;
+import com.saas.saas_foundry_api.service.queue.OrganizationProvisioningEvent;
 import com.saas.saas_foundry_api.utils.OrganizationUtils;
 import com.saas.saas_foundry_api.utils.TenantUtils;
-import com.saas.saas_foundry_api.utils.ThreadUtils;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -47,7 +46,7 @@ public class OrganizationProvisioningWorker {
   @RabbitListener(queues = QueueNames.ORGANIZATION_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionOrganization(String json) throws JsonProcessingException {
-    TenantProvisioningEvent event = OrganizationMapper.toProvisioningEvent(json);
+    OrganizationProvisioningEvent event = OrganizationMapper.toProvisioningEvent(json);
     OrganizationEntity organizationEntity = organizationUtils.findOrgByUid(event.getUid());
 
     if (!organizationEntity.isKeycloakUserProvisioned()) {
@@ -101,8 +100,6 @@ public class OrganizationProvisioningWorker {
     organizationEntity.setDbProvisioned(true);
     organizationEntity.setDbProvisionAttemptedOn(Instant.now());
 
-    // ThreadUtils.sleep(10000, "Sleeping for 5 seconds before migrating schema to the new database.");
-    
     tenantDbMigrationService.migrate(dbName, TenantType.ORGANIZATION);
 
     updateOrganizationEntity(organizationEntity);

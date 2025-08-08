@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saas.saas_foundry_api.database.entity.OrganizationEntity;
 import com.saas.saas_foundry_api.dto.request.OrganizationDto;
-import com.saas.saas_foundry_api.service.queue.TenantProvisioningEvent;
+import com.saas.saas_foundry_api.service.queue.OrganizationProvisioningEvent;
 
 public class OrganizationMapper {
 
@@ -27,14 +27,14 @@ public class OrganizationMapper {
     return organizationDto;
   }
 
-  public static TenantProvisioningEvent toProvisioningEvent(String json)
+  public static OrganizationProvisioningEvent toProvisioningEvent(String json)
       throws JsonProcessingException {
     ObjectMapper objectMapper = new ObjectMapper();
     return objectMapper.readValue(json,
-        TenantProvisioningEvent.class);
+        OrganizationProvisioningEvent.class);
   }
 
-  public static String toJsonString(TenantProvisioningEvent organizationProvisioningEvent)
+  public static String toJsonString(OrganizationProvisioningEvent organizationProvisioningEvent)
       throws JsonProcessingException {
     ObjectMapper objectMapper = new ObjectMapper();
     return objectMapper.writeValueAsString(organizationProvisioningEvent);

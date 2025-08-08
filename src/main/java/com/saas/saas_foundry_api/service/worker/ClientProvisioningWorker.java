@@ -23,7 +23,7 @@ import com.saas.saas_foundry_api.service.other.DatabaseService;
 import com.saas.saas_foundry_api.service.other.EmailService;
 import com.saas.saas_foundry_api.service.other.KeycloakService;
 import com.saas.saas_foundry_api.service.other.TenantDbMigrationService;
-import com.saas.saas_foundry_api.service.queue.TenantProvisioningEvent;
+import com.saas.saas_foundry_api.service.queue.ClientProvisioningEvent;
 import com.saas.saas_foundry_api.utils.ClientUtils;
 import com.saas.saas_foundry_api.utils.TenantUtils;
 import com.saas.saas_foundry_api.utils.ThreadUtils;
@@ -44,9 +44,9 @@ public class ClientProvisioningWorker {
   @RabbitListener(queues = QueueNames.CLIENT_PROVISIONING_QUEUE)
   @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
   public void provisionClient(String json) throws JsonProcessingException {
-    TenantProvisioningEvent event = ClientMapper.toProvisioningEvent(json);
+    ClientProvisioningEvent event = ClientMapper.toProvisioningEvent(json);
 
-    String orgTenantName = TenantUtils.getTenantDatabaseName(event.getUid(), TenantType.ORGANIZATION);
+    String orgTenantName = TenantUtils.getTenantDatabaseName(event.getOrganizationUid(), TenantType.ORGANIZATION);
     ClientEntity clientEntity = clientUtils.findClientByUid(orgTenantName, event.getUid());
 
     if (!clientEntity.isKeycloakRealmProvisioned()) {
@@ -118,8 +118,6 @@ public class ClientProvisioningWorker {
     databaseService.createDatabase(dbName);
     clientEntity.setDbProvisioned(true);
     clientEntity.setDbProvisionAttemptedOn(Instant.now());
-
-    // ThreadUtils.sleep(10000, "Sleeping for 5 seconds before migrating schema to the new database.");
 
     tenantDbMigrationService.migrate(dbName, TenantType.CLIENT);
 

@@ -21,7 +21,7 @@ import com.saas.saas_foundry_api.enums.TenantType;
 import com.saas.saas_foundry_api.exception.DuplicateResourceException;
 import com.saas.saas_foundry_api.mapper.ClientMapper;
 import com.saas.saas_foundry_api.mapper.UserMapper;
-import com.saas.saas_foundry_api.service.queue.TenantProvisioningEvent;
+import com.saas.saas_foundry_api.service.queue.ClientProvisioningEvent;
 import com.saas.saas_foundry_api.service.queue.MessageQueue;
 import com.saas.saas_foundry_api.service.queue.UserProvisioningEvent;
 import com.saas.saas_foundry_api.utils.TenantUtils;
@@ -55,7 +55,7 @@ public class ClientService {
           return null;
         });
 
-    TenantProvisioningEvent event = new TenantProvisioningEvent(clientEntity.getUid());
+    ClientProvisioningEvent event = new ClientProvisioningEvent(clientEntity.getUid(), orgUid);
     messageQueue.sendMessage(QueueNames.CLIENT_PROVISIONING_QUEUE, event);
   }
 

@@ -23,6 +23,7 @@ public class TenantDbMigrationService {
         .schemas(schemaName)
         .defaultSchema(schemaName)
         .locations("classpath:db/migration/" + tenantType.getValue())
+        .table("flyway_schema_history_saas_foundry_api")
         .baselineOnMigrate(true)
         .load();
 

@@ -52,8 +52,8 @@ public class ClientController {
   @Operation(description = "Create a user")
   public ResponseEntity<String> createUser(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestBody UserDto userDto) {
-    clientService.createUser(clientUid, userDto);
     TenantUtils.isClientOrAboveAuth(requestContext);
+    clientService.createUser(clientUid, userDto);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
 

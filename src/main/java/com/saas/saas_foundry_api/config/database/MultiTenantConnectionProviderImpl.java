@@ -30,7 +30,7 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
     if (tenant == null) {
       tenant = tenantProperties.getRoot();
     }
-    logger.info("Switching to tenant DB: {}", tenant);
+    logger.info("Switching to tenant Schema: {}", tenant);
     Connection connection = dataSource.getConnection();
     connection.setSchema(tenant);
     return connection;

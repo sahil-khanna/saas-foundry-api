@@ -11,8 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.saas.saas_foundry_api.common.QueueNames;
-import com.saas.saas_foundry_api.config.database.TenantQueryRunner;
+import com.saas.saas_foundry_api.config.database.TenantRepositoryExecutor;
 import com.saas.saas_foundry_api.database.entity.ClientEntity;
+import com.saas.saas_foundry_api.database.repository.ClientRepository;
 import com.saas.saas_foundry_api.dto.request.KeycloakRealmDto;
 import com.saas.saas_foundry_api.dto.request.KeycloakUserDto;
 import com.saas.saas_foundry_api.dto.request.SendEmailDto;
@@ -26,14 +27,13 @@ import com.saas.saas_foundry_api.service.queue.ClientProvisioningEvent;
 import com.saas.saas_foundry_api.utils.ClientUtils;
 import com.saas.saas_foundry_api.utils.TenantUtils;
 import com.saas.saas_foundry_api.utils.ThreadUtils;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
 public class ClientProvisioningWorker {
 
-  private final TenantQueryRunner tenantQueryRunner;
+  private final TenantRepositoryExecutor tenantRepositoryExecutor;
   private final KeycloakService keycloakService;
   private final EmailService emailService;
   private final DatabaseService databaseService;
@@ -46,7 +46,7 @@ public class ClientProvisioningWorker {
   public void provisionClient(String json) throws JsonProcessingException {
     ClientProvisioningEvent event = ClientMapper.toProvisioningEvent(json);
 
-    String orgTenantName = TenantUtils.getTenantDatabaseName(event.getOrgUid(), TenantType.ORGANIZATION);
+    String orgTenantName = TenantUtils.getTenantDatabaseName(event.getOrganizationUid(), TenantType.ORGANIZATION);
     ClientEntity clientEntity = clientUtils.findClientByUid(orgTenantName, event.getUid());
 
     if (!clientEntity.isKeycloakRealmProvisioned()) {
@@ -119,16 +119,14 @@ public class ClientProvisioningWorker {
     clientEntity.setDbProvisioned(true);
     clientEntity.setDbProvisionAttemptedOn(Instant.now());
 
-    ThreadUtils.sleep(10000, "Sleeping for 5 seconds before migrating schema to the new database.");
-
     tenantDbMigrationService.migrate(dbName, TenantType.CLIENT);
 
     updateClientEntity(orgTenantName, clientEntity);
   }
 
   private void updateClientEntity(String orgTenantName, ClientEntity clientEntity) {
-    tenantQueryRunner.runInTenant(orgTenantName, entityManager -> {
-      entityManager.merge(clientEntity);
+    tenantRepositoryExecutor.execute(orgTenantName, ClientRepository.class, repository -> {
+      repository.save(clientEntity);
       return null;
     });
   }

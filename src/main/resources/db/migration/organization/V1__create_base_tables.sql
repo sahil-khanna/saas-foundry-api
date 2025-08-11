@@ -1,9 +1,9 @@
--- Table: public.clients
+-- Table: clients
 
--- DROP TABLE IF EXISTS public.clients;
+-- DROP TABLE IF EXISTS clients;
 
 -- Create table: clients
-CREATE TABLE IF NOT EXISTS public.clients (
+CREATE TABLE IF NOT EXISTS clients (
     id character varying(27) COLLATE pg_catalog."default" NOT NULL,
     name character varying(250) COLLATE pg_catalog."default",
     admin_email character varying(150) COLLATE pg_catalog."default",
@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS public.clients (
     CONSTRAINT clients_pkey PRIMARY KEY (id)
 );
 
-ALTER TABLE IF EXISTS public.clients
+ALTER TABLE IF EXISTS clients
     OWNER TO postgres;
 
 CREATE INDEX IF NOT EXISTS idx_client_name
-    ON public.clients USING btree
+    ON clients USING btree
     (name COLLATE pg_catalog."default" ASC NULLS LAST);

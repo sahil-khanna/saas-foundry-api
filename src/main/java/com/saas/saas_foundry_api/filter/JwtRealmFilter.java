@@ -59,7 +59,7 @@ public class JwtRealmFilter extends OncePerRequestFilter {
 
       decoder.decode(token);
 
-      if ("master".equals(realm)) {
+      if (keycloakProperties.getMasterRealm().equals(realm)) {
         requestContext.setType(TenantType.SUPER_ADMIN);
       } else if (keycloakProperties.getOrganizationRealm().equals(realm)) {
         requestContext.setType(TenantType.ORGANIZATION);

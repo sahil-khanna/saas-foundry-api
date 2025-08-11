@@ -11,10 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.saas.saas_foundry_api.common.QueueNames;
-import com.saas.saas_foundry_api.config.database.TenantQueryRunner;
+import com.saas.saas_foundry_api.config.database.TenantRepositoryExecutor;
 import com.saas.saas_foundry_api.config.properties.KeycloakProperties;
 import com.saas.saas_foundry_api.config.properties.TenantProperties;
 import com.saas.saas_foundry_api.database.entity.OrganizationEntity;
+import com.saas.saas_foundry_api.database.repository.OrganizationRepository;
 import com.saas.saas_foundry_api.dto.request.KeycloakUserDto;
 import com.saas.saas_foundry_api.dto.request.SendEmailDto;
 import com.saas.saas_foundry_api.enums.TenantType;
@@ -26,8 +27,6 @@ import com.saas.saas_foundry_api.service.other.TenantDbMigrationService;
 import com.saas.saas_foundry_api.service.queue.OrganizationProvisioningEvent;
 import com.saas.saas_foundry_api.utils.OrganizationUtils;
 import com.saas.saas_foundry_api.utils.TenantUtils;
-import com.saas.saas_foundry_api.utils.ThreadUtils;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -36,7 +35,7 @@ public class OrganizationProvisioningWorker {
 
   private final KeycloakProperties keycloakProperties;
   private final TenantProperties tenantProperties;
-  private final TenantQueryRunner tenantQueryRunner;
+  private final TenantRepositoryExecutor tenantRepositoryExecutor;
   private final KeycloakService keycloakService;
   private final EmailService emailService;
   private final OrganizationUtils organizationUtils;
@@ -54,12 +53,12 @@ public class OrganizationProvisioningWorker {
       createKeycloakUser(organizationEntity);
     }
 
-    if (!organizationEntity.isWelcomeEmailSent()) {
-      sendWelcomeEmail(organizationEntity);
-    }
-
     if (!organizationEntity.isDbProvisioned()) {
       createDatabase(organizationEntity);
+    }
+
+    if (!organizationEntity.isWelcomeEmailSent()) {
+      sendWelcomeEmail(organizationEntity);
     }
   }
 
@@ -101,16 +100,14 @@ public class OrganizationProvisioningWorker {
     organizationEntity.setDbProvisioned(true);
     organizationEntity.setDbProvisionAttemptedOn(Instant.now());
 
-    ThreadUtils.sleep(10000, "Sleeping for 5 seconds before migrating schema to the new database.");
-    
     tenantDbMigrationService.migrate(dbName, TenantType.ORGANIZATION);
 
     updateOrganizationEntity(organizationEntity);
   }
 
   private void updateOrganizationEntity(OrganizationEntity organizationEntity) {
-    tenantQueryRunner.runInTenant(tenantProperties.getRoot(), entityManager -> {
-      entityManager.merge(organizationEntity);
+    tenantRepositoryExecutor.execute(tenantProperties.getRoot(), OrganizationRepository.class, repository -> {
+      repository.save(organizationEntity);
       return null;
     });
   }

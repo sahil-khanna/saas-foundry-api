@@ -32,7 +32,7 @@ public class ClientController {
   @PostMapping
   @Operation(description = "Create a client")
   public ResponseEntity<String> createClient(@PathVariable String orgUid, @RequestBody ClientDto clientDto) {
-    TenantUtils.isSuperAdminAuth(requestContext);
+    TenantUtils.isOrganizationOrAboveAuth(requestContext);
     clientService.createClient(orgUid, clientDto);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
@@ -44,7 +44,7 @@ public class ClientController {
   @GetMapping
   public ResponseEntity<ClientsDto> listClients(@PathVariable String orgUid, @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
-    TenantUtils.isSuperAdminAuth(requestContext);
+    TenantUtils.isOrganizationOrAboveAuth(requestContext);
     return ResponseEntity.ok().body(clientService.listClients(orgUid, page, size));
   }
 
@@ -52,8 +52,8 @@ public class ClientController {
   @Operation(description = "Create a user")
   public ResponseEntity<String> createUser(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestBody UserDto userDto) {
+    TenantUtils.isClientOrAboveAuth(requestContext);
     clientService.createUser(clientUid, userDto);
-    TenantUtils.isClientAuth(requestContext);
     return ResponseEntity.accepted().body("You will get an email when the setup is complete.");
   }
 
@@ -65,7 +65,7 @@ public class ClientController {
   public ResponseEntity<UsersDto> listUsers(@PathVariable String orgUid, @PathVariable String clientUid,
       @RequestParam @Min(0) int page,
       @RequestParam @Range(min = 1, max = 100) int size) {
-    TenantUtils.isClientAuth(requestContext);
+    TenantUtils.isClientOrAboveAuth(requestContext);
     return ResponseEntity.ok().body(clientService.listUsers(clientUid, page, size));
   }
 }

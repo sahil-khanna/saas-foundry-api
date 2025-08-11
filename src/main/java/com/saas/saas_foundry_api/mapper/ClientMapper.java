@@ -19,7 +19,7 @@ public class ClientMapper {
 
     return clientEntity;
   }
-  
+
   public static ClientDto toDto(ClientEntity clientEntity) {
     ClientDto clientDto = new ClientDto();
     clientDto.setAdminEmail(clientEntity.getAdminEmail());
@@ -31,8 +31,7 @@ public class ClientMapper {
   public static ClientProvisioningEvent toProvisioningEvent(String json)
       throws JsonProcessingException {
     ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper.readValue(json,
-        ClientProvisioningEvent.class);
+    return objectMapper.readValue(json, ClientProvisioningEvent.class);
   }
 
   public static String toJsonString(ClientProvisioningEvent clientProvisioningEvent)

@@ -52,10 +52,6 @@ Ensure you have Docker and Docker Compose installed.
 
 2. Edit `.prod.env` to include environment-specific credentials, such as DB URL, Keycloak secrets, etc.
 
-```bash
-chmod +x setup.sh
-./setup.sh
-```
 
 #### 🚀 Start Docker Containers
 ```bash
@@ -119,7 +115,7 @@ To create Clients, the Organization Admin can login with the below request.
 curl --location --request POST 'http://localhost:8080/realms/saas-organization/protocol/openid-connect/token' \
    --header 'Content-Type: application/x-www-form-urlencoded' \
    --data-urlencode 'grant_type=password' \
-   --data-urlencode 'client_id=organization-adminx' \
+   --data-urlencode 'client_id=organization-admin' \
    --data-urlencode 'username=<USERNAME>' \
    --data-urlencode 'password=<PASSWORD>'
 ```

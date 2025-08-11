@@ -11,8 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.CannotCreateTransactionException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.saas.saas_foundry_api.common.QueueNames;
-import com.saas.saas_foundry_api.config.database.TenantQueryRunner;
+import com.saas.saas_foundry_api.config.database.TenantRepositoryExecutor;
 import com.saas.saas_foundry_api.database.entity.UserEntity;
+import com.saas.saas_foundry_api.database.repository.UserRepository;
 import com.saas.saas_foundry_api.dto.request.KeycloakUserDto;
 import com.saas.saas_foundry_api.dto.request.SendEmailDto;
 import com.saas.saas_foundry_api.enums.TenantType;
@@ -22,7 +23,6 @@ import com.saas.saas_foundry_api.service.other.KeycloakService;
 import com.saas.saas_foundry_api.service.queue.UserProvisioningEvent;
 import com.saas.saas_foundry_api.utils.TenantUtils;
 import com.saas.saas_foundry_api.utils.UserUtils;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -32,7 +32,7 @@ public class UserProvisioningWorker {
   private final KeycloakService keycloakService;
   private final EmailService emailService;
   private final UserUtils userUtils;
-  private final TenantQueryRunner tenantQueryRunner;
+  private final TenantRepositoryExecutor tenantRepositoryExecutor;
   private static final Logger logger = LoggerFactory.getLogger(UserProvisioningWorker.class);
 
   @RabbitListener(queues = QueueNames.USER_PROVISIONING_QUEUE)
@@ -85,8 +85,8 @@ public class UserProvisioningWorker {
   }
 
   private void updateUserEntity(String clientTenantName, UserEntity userEntity) {
-    tenantQueryRunner.runInTenant(clientTenantName, entityManager -> {
-      entityManager.merge(userEntity);
+    tenantRepositoryExecutor.execute(clientTenantName, UserRepository.class, repository -> {
+      repository.save(userEntity);
       return null;
     });
   }

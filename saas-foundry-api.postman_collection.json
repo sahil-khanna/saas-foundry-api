@@ -1,0 +1,725 @@
+{
+	"info": {
+		"_postman_id": "a404c1dc-7f9c-418c-997f-dc1b2d96872d",
+		"name": "saas-foundry-api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27775026"
+	},
+	"item": [
+		{
+			"name": "Create Organization",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"let payload = {",
+							"    name: pm.variables.replaceIn(\"{{$randomCompanyName}}\"),",
+							"    adminEmail: pm.variables.replaceIn(\"{{$randomExampleEmail}}\").toLowerCase()",
+							"};",
+							"",
+							"pm.collectionVariables.set(\"organizationPayload\", JSON.stringify(payload));",
+							"pm.request.body.raw = JSON.stringify(payload);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 202\", function () {",
+							"    pm.response.to.have.status(202);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "oauth2",
+					"oauth2": [
+						{
+							"key": "clientId",
+							"value": "saas-admin",
+							"type": "string"
+						},
+						{
+							"key": "tokenName",
+							"value": "saas-admin",
+							"type": "string"
+						},
+						{
+							"key": "password",
+							"value": "{{keycloakSuperAdminPassword}}",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "{{keycloakSuperAdminUsername}}",
+							"type": "string"
+						},
+						{
+							"key": "grant_type",
+							"value": "password_credentials",
+							"type": "string"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "{{keycloakAuthCallbackUrl}}",
+							"type": "string"
+						},
+						{
+							"key": "useBrowser",
+							"value": false,
+							"type": "boolean"
+						},
+						{
+							"key": "clientSecret",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "accessTokenUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/master/{{keycloakTokenEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "authUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/master/{{keycloakAuthEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "scope",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "state",
+							"value": "{{$guid}}",
+							"type": "string"
+						},
+						{
+							"key": "addTokenTo",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "*/*"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/organizations",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"organizations"
+					]
+				},
+				"description": "Create an organization"
+			},
+			"response": []
+		},
+		{
+			"name": "Get organizations",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"let jsonData;",
+							"pm.test(\"Response is valid JSON\", function () {",
+							"    jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.be.an(\"object\");",
+							"});",
+							"",
+							"pm.test(\"Organizations list exists and has more than 0 entry\", function () {",
+							"    pm.expect(jsonData.organizations).to.be.an(\"array\");",
+							"    pm.expect(jsonData.organizations.length).to.be.above(0);",
+							"});",
+							"",
+							"pm.test(\"First organization has UID\", function () {",
+							"    const firstOrganization = jsonData.organizations[0];",
+							"    pm.expect(firstOrganization).to.have.property(\"uid\");",
+							"    pm.expect(firstOrganization.uid).to.be.a(\"string\").that.is.not.empty;",
+							"",
+							"    let selectedOrganization = JSON.parse(pm.collectionVariables.get(\"organizationPayload\"));",
+							"    selectedOrganization.uid = firstOrganization.uid;",
+							"    pm.collectionVariables.set(\"organizationPayload\", JSON.stringify(selectedOrganization));",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "oauth2",
+					"oauth2": [
+						{
+							"key": "tokenName",
+							"value": "saas-admin",
+							"type": "string"
+						},
+						{
+							"key": "password",
+							"value": "{{keycloakSuperAdminPassword}}",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "{{keycloakSuperAdminUsername}}",
+							"type": "string"
+						},
+						{
+							"key": "grant_type",
+							"value": "password_credentials",
+							"type": "string"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "{{keycloakAuthCallbackUrl}}",
+							"type": "string"
+						},
+						{
+							"key": "useBrowser",
+							"value": false,
+							"type": "boolean"
+						},
+						{
+							"key": "clientSecret",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "clientId",
+							"value": "{{keycloakSuperAdminClientId}}",
+							"type": "string"
+						},
+						{
+							"key": "accessTokenUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/master/{{keycloakTokenEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "authUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/master/{{keycloakAuthEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "scope",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "state",
+							"value": "{{$guid}}",
+							"type": "string"
+						},
+						{
+							"key": "addTokenTo",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/organizations?page=0&size=20",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"organizations"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0",
+							"description": "(Required) "
+						},
+						{
+							"key": "size",
+							"value": "20",
+							"description": "(Required) "
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delay 10 Seconds",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://postman-echo.com/delay/10",
+					"protocol": "https",
+					"host": [
+						"postman-echo",
+						"com"
+					],
+					"path": [
+						"delay",
+						"10"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delay 10 Seconds",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://postman-echo.com/delay/10",
+					"protocol": "https",
+					"host": [
+						"postman-echo",
+						"com"
+					],
+					"path": [
+						"delay",
+						"10"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delay 10 Seconds",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://postman-echo.com/delay/10",
+					"protocol": "https",
+					"host": [
+						"postman-echo",
+						"com"
+					],
+					"path": [
+						"delay",
+						"10"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Client",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"let selectedOrganization = JSON.parse(pm.collectionVariables.get(\"organizationPayload\"));",
+							"pm.variables.set(\"selectedOrganizationUid\", selectedOrganization.uid)",
+							"pm.collectionVariables.set(\"selectedOrganizationAdminEmail\", selectedOrganization.adminEmail);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 202\", function () {",
+							"    pm.response.to.have.status(202);",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "oauth2",
+					"oauth2": [
+						{
+							"key": "clientId",
+							"value": "organization-admin",
+							"type": "string"
+						},
+						{
+							"key": "grant_type",
+							"value": "password_credentials",
+							"type": "string"
+						},
+						{
+							"key": "tokenName",
+							"value": "organization-admin",
+							"type": "string"
+						},
+						{
+							"key": "client_authentication",
+							"value": "header",
+							"type": "string"
+						},
+						{
+							"key": "accessTokenUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/saas-organization/{{keycloakTokenEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "{{selectedOrganizationAdminEmail}}",
+							"type": "string"
+						},
+						{
+							"key": "password",
+							"value": "123456789",
+							"type": "string"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "{{keycloakAuthCallbackUrl}}",
+							"type": "string"
+						},
+						{
+							"key": "useBrowser",
+							"value": false,
+							"type": "boolean"
+						},
+						{
+							"key": "clientSecret",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "authUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/master/{{keycloakAuthEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "scope",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "state",
+							"value": "{{$guid}}",
+							"type": "string"
+						},
+						{
+							"key": "addTokenTo",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "*/*"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"{{$randomCompanyName}}\",\n  \"adminEmail\": \"{{$randomExampleEmail}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/organizations/{{selectedOrganizationUid}}/clients",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"organizations",
+						"{{selectedOrganizationUid}}",
+						"clients"
+					]
+				},
+				"description": "Create a client"
+			},
+			"response": []
+		},
+		{
+			"name": "Get clients",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"let jsonData;",
+							"pm.test(\"Response is valid JSON\", function () {",
+							"    jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.be.an(\"object\");",
+							"});",
+							"",
+							"pm.test(\"Clients list exists and has more than 0 entry\", function () {",
+							"    pm.expect(jsonData.clients).to.be.an(\"array\");",
+							"    pm.expect(jsonData.clients.length).to.be.above(0);",
+							"});",
+							"",
+							"pm.test(\"First client has UID\", function () {",
+							"    const firstClient = jsonData.clients[0];",
+							"    pm.expect(firstClient).to.have.property(\"uid\");",
+							"    pm.expect(firstClient.uid).to.be.a(\"string\").that.is.not.empty;",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"let selectedOrganization = JSON.parse(pm.collectionVariables.get(\"organizationPayload\"));",
+							"pm.variables.set(\"selectedOrganizationUid\", selectedOrganization.uid)"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "oauth2",
+					"oauth2": [
+						{
+							"key": "tokenName",
+							"value": "organization-admin",
+							"type": "string"
+						},
+						{
+							"key": "accessTokenUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/{{selectedOrganizationUid}}/{{keycloakTokenEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "{{selectedOrganizationAdminEmail}}",
+							"type": "string"
+						},
+						{
+							"key": "password",
+							"value": "123456789",
+							"type": "string"
+						},
+						{
+							"key": "grant_type",
+							"value": "password_credentials",
+							"type": "string"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "{{keycloakAuthCallbackUrl}}",
+							"type": "string"
+						},
+						{
+							"key": "useBrowser",
+							"value": false,
+							"type": "boolean"
+						},
+						{
+							"key": "clientSecret",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "clientId",
+							"value": "{{keycloakSuperAdminClientId}}",
+							"type": "string"
+						},
+						{
+							"key": "authUrl",
+							"value": "{{keycloakUrlPrefix}}/realms/master/{{keycloakAuthEndpoint}}",
+							"type": "string"
+						},
+						{
+							"key": "scope",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "state",
+							"value": "{{$guid}}",
+							"type": "string"
+						},
+						{
+							"key": "addTokenTo",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/organizations/{{selectedOrganizationUid}}/clients?page=0&size=20",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"organizations",
+						"{{selectedOrganizationUid}}",
+						"clients"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0",
+							"description": "(Required) "
+						},
+						{
+							"key": "size",
+							"value": "20",
+							"description": "(Required) "
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:6060/api",
+			"type": "string"
+		},
+		{
+			"key": "keycloakUrlPrefix",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "keycloakAuthEndpoint",
+			"value": "protocol/openid-connect/auth",
+			"type": "string"
+		},
+		{
+			"key": "keycloakTokenEndpoint",
+			"value": "protocol/openid-connect/token",
+			"type": "string"
+		},
+		{
+			"key": "keycloakAuthCallbackUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "keycloakSuperAdminUsername",
+			"value": "saas.admin",
+			"type": "string"
+		},
+		{
+			"key": "keycloakSuperAdminPassword",
+			"value": "£eLX}#8,)73r",
+			"type": "string"
+		},
+		{
+			"key": "organizationPayload",
+			"value": ""
+		},
+		{
+			"key": "keycloakSuperAdminClientId",
+			"value": "saas-admin",
+			"type": "string"
+		},
+		{
+			"key": "selectedOrganizationAdminEmail",
+			"value": ""
+		}
+	]
+}

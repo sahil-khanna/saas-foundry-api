@@ -63,6 +63,7 @@ public class KeycloakService {
     realmRepresentation.setDisplayName(keycloakRealmDto.getDisplayName());
     realmRepresentation.setRealm(keycloakRealmDto.getUid());
     realmRepresentation.setEnabled(true);
+    realmRepresentation.setAccessTokenLifespan(900);
 
     ClientRepresentation clientRepresentation = new ClientRepresentation();
     clientRepresentation.setClientId("saas-user");
@@ -70,6 +71,7 @@ public class KeycloakService {
     clientRepresentation.setRedirectUris(List.of("http://localhost:3000/*"));
     clientRepresentation.setServiceAccountsEnabled(true);
     clientRepresentation.setPublicClient(true);
+    clientRepresentation.setDirectAccessGrantsEnabled(true);
     realmRepresentation.setClients(List.of(clientRepresentation));
 
     boolean status = false;
